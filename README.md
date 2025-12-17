@@ -23,9 +23,9 @@ A professional partnership payment calculator with admin controls and payment hi
    ```
 
 ### Partner Details
-- **Bhargav (A)**: ₹68,500 debt
-- **Sagar (B)**: ₹68,500 debt  
-- **Bharat (C)**: ₹19,700 debt
+- ** (A)**: ₹68,500 debt
+- ** (B)**: ₹68,500 debt  
+- ** (C)**: ₹19,700 debt
 - **Person X**: Receives 50% until all debt paid
 
 ## Deployment
