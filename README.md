@@ -1,108 +1,78 @@
 # Partnership Calculator Telegram Mini App
 
-Complete Telegram Mini App with online data storage.
+A professional partnership payment calculator with admin controls and payment history.
 
 ## Features
-- 💰 Record payments with automatic split calculation
-- 📊 Track total debt paid and salary distributed
-- 📜 Payment history with timestamps
-- 👥 Track Bhargav, Sagar, and Bharat debts/salaries
-- 💾 Data stored online (accessible by all partners)
 
-## Local Development
+✅ Beautiful UI matching your design
+✅ Admin authentication (only you can record payments)
+✅ Others can only view history
+✅ Real-time debt tracking
+✅ Payment history
+✅ Data persistence
+✅ Telegram Mini App integration
 
-```bash
-npm install
-npm start
-```
+## Configuration
 
-Visit: http://localhost:10000
-
-## Deploy to Render (FREE)
-
-1. **Push to GitHub:**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/YOUR_USERNAME/partnership-bot.git
-   git push -u origin main
+### Admin Setup
+1. First person to enter correct password becomes admin
+2. Default password: `admin123`
+3. Change password in `server.js` line 9:
+   ```javascript
+   const ADMIN_PASSWORD = 'your_secure_password_here';
    ```
 
-2. **Deploy on Render:**
-   - Go to https://render.com
-   - Sign up (free)
-   - Click "New +" → "Web Service"
-   - Connect your GitHub repo
-   - Settings:
-     - Name: `partnership-bot`
-     - Environment: `Node`
-     - Build Command: `npm install`
-     - Start Command: `npm start`
-     - Plan: **Free**
-   - Click "Create Web Service"
-   - Wait 2-3 minutes for deployment
+### Partner Details
+- **Bhargav (A)**: ₹68,500 debt
+- **Sagar (B)**: ₹68,500 debt  
+- **Bharat (C)**: ₹19,700 debt
+- **Person X**: Receives 50% until all debt paid
 
-3. **Get your URL:**
-   - Render will give you: `https://partnership-bot.onrender.com`
+## Deployment
 
-## Connect to Telegram
+### Files Included
+- `server.js` - Backend API with admin authentication
+- `package.json` - Node.js dependencies
+- `public/index.html` - Mini App interface
+- `README.md` - This file
 
-1. **Create bot:**
-   - Open @BotFather in Telegram
-   - Send `/newbot`
-   - Follow instructions
-   - Copy your bot token
+### Deploy to Render
+1. Push to GitHub
+2. Connect to Render
+3. Deploy as Web Service
+4. Get your URL
 
-2. **Set Menu Button:**
-   - In @BotFather: `/mybots` → Select your bot
-   - "Bot Settings" → "Menu Button" → "Configure Menu Button"
-   - Enter: `https://partnership-bot.onrender.com`
-   - Button text: "Open Calculator"
+### Setup Telegram Bot
+1. Create bot with @BotFather
+2. Set menu button URL to your Render URL
+3. First user with password becomes admin
 
-3. **Done!**
-   - Open your bot in Telegram
-   - Tap "Open Calculator"
-   - Start recording payments!
+## Security
+
+⚠️ **IMPORTANT**: Change the admin password in server.js before deploying!
+
+## Usage
+
+### For Admin (You)
+1. Open bot → Enter admin password
+2. Enter payment amount
+3. Click "Record Payment"
+4. View history anytime
+
+### For Others
+1. Open bot
+2. View payment history only
+3. See current debts
+4. Cannot record payments
 
 ## API Endpoints
 
-- `GET /api/state` - Get current debts, totals, all data
-- `POST /api/payment` - Record new payment
-  ```json
-  { "amount": 10000, "user": "Name" }
-  ```
-- `GET /api/history?limit=20` - Get payment history
-- `POST /api/reset` - Reset all data (admin only)
-  ```json
-  { "password": "admin123" }
-  ```
-- `POST /api/update-debts` - Update initial debts (admin only)
-  ```json
-  { "password": "admin123", "debts": { "A": 68500, "B": 68500, "C": 19700 } }
-  ```
+- `GET /api/state` - Get current state
+- `GET /api/history` - Get payment history
+- `POST /api/payment` - Record payment (admin only)
+- `POST /api/admin/login` - Admin login
+- `POST /api/admin/reset` - Reset data (admin only)
 
-## Data Storage
+## License
 
-Currently uses **in-memory storage** (resets when server restarts).
-
-For **permanent storage**, add a free database:
-- **MongoDB Atlas** (free 512MB)
-- **PostgreSQL on Render** (free 90 days)
-
-See "Upgrade to Database" section below.
-
-## Admin Password
-
-Default: `admin123`
-
-Change in `server.js` line 115 and 126.
-
-## Partner Configuration
-
-- Bhargav (A): ₹68,500 debt
-- Sagar (B): ₹68,500 debt
-- Bharat (C): ₹19,700 debt
-
-Debt split: 46.28% / 46.28% / 7.43%
-Salary split: 13.72% / 13.72% / 72.57%
+Private - For internal use only
