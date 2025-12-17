@@ -5,39 +5,59 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-// ⚠️ CHANGE THIS PASSWORD BEFORE DEPLOYING!
 const ADMIN_PASSWORD = 'admin123';
+const PRESET_ADMIN_ID = null;
 
-// ⚠️ SET YOUR TELEGRAM ID HERE TO SKIP PASSWORD (Optional)
-// Find your Telegram ID: @userinfobot
-const PRESET_ADMIN_ID = 7873779706; // Example: 123456789
-
-// In-memory storage
 let ADMIN_TELEGRAM_ID = PRESET_ADMIN_ID;
+
+const INITIAL_DEBTS = {
+    A: 68500,  // Bhargav
+    B: 68500,  // Sagar
+    C: 19700   // Bharat
+};
+
+const SALARY_SPLIT = {
+    A: 0.30,  // Bhargav 30%
+    B: 0.30,  // Sagar 30%
+    C: 0.40   // Bharat 40%
+};
+
+const TOTAL_DEBT = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
 
 let state = {
     totalDebtPaid: 0,
     totalSalaryPaid: 0,
     payments: [],
-    initialDebts: {
-        A: 68500,  // Bhargav
-        B: 68500,  // Sagar
-        C: 19700   // Bharat
-    }
+    initialDebts: INITIAL_DEBTS
 };
 
-// Check if user is admin
 function isAdmin(telegramId) {
     if (!ADMIN_TELEGRAM_ID) return false;
     return telegramId?.toString() === ADMIN_TELEGRAM_ID?.toString();
 }
 
-// GET: Current state
+function calculatePartnerDetails(toPersonX, toSalary) {
+    // Debt portions (proportional to initial debt)
+    const debtA = toPersonX * (INITIAL_DEBTS.A / TOTAL_DEBT);
+    const debtB = toPersonX * (INITIAL_DEBTS.B / TOTAL_DEBT);
+    const debtC = toPersonX * (INITIAL_DEBTS.C / TOTAL_DEBT);
+
+    // Salary portions (FIXED: 30% / 30% / 40%)
+    const salaryA = toSalary * SALARY_SPLIT.A;
+    const salaryB = toSalary * SALARY_SPLIT.B;
+    const salaryC = toSalary * SALARY_SPLIT.C;
+
+    return {
+        A: { debt: debtA, salary: salaryA },
+        B: { debt: debtB, salary: salaryB },
+        C: { debt: debtC, salary: salaryC }
+    };
+}
+
 app.get('/api/state', (req, res) => {
     res.json(state);
 });
 
-// GET: Payment history
 app.get('/api/history', (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     res.json({
@@ -47,7 +67,6 @@ app.get('/api/history', (req, res) => {
     });
 });
 
-// POST: Record payment (Admin only)
 app.post('/api/payment', (req, res) => {
     const { amount, recordedBy, telegramId } = req.body;
 
@@ -59,10 +78,11 @@ app.post('/api/payment', (req, res) => {
         return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    const totalDebt = state.initialDebts.A + state.initialDebts.B + state.initialDebts.C;
-    const remainingDebt = Math.max(0, totalDebt - state.totalDebtPaid);
+    const remainingDebt = Math.max(0, TOTAL_DEBT - state.totalDebtPaid);
     const toPersonX = Math.min(amount, remainingDebt);
     const toSalary = amount - toPersonX;
+
+    const partnerDetails = calculatePartnerDetails(toPersonX, toSalary);
 
     state.totalDebtPaid += toPersonX;
     state.totalSalaryPaid += toSalary;
@@ -71,112 +91,46 @@ app.post('/api/payment', (req, res) => {
         amount: parseFloat(amount),
         toPersonX,
         toSalary,
+        partnerDetails,
         recordedBy: recordedBy || 'Unknown',
         timestamp: new Date().toISOString(),
         telegramId
     });
 
-    res.json({ 
-        success: true, 
-        state: {
-            totalDebtPaid: state.totalDebtPaid,
-            totalSalaryPaid: state.totalSalaryPaid
-        }
-    });
+    console.log(`💰 Payment: ₹${amount} | Debt: ₹${toPersonX} | Salary: ₹${toSalary}`);
+    console.log(`   A: Debt ₹${partnerDetails.A.debt.toFixed(2)} + Salary ₹${partnerDetails.A.salary.toFixed(2)}`);
+    console.log(`   B: Debt ₹${partnerDetails.B.debt.toFixed(2)} + Salary ₹${partnerDetails.B.salary.toFixed(2)}`);
+    console.log(`   C: Debt ₹${partnerDetails.C.debt.toFixed(2)} + Salary ₹${partnerDetails.C.salary.toFixed(2)}`);
+
+    res.json({ success: true, state: { totalDebtPaid: state.totalDebtPaid, totalSalaryPaid: state.totalSalaryPaid } });
 });
 
-// POST: Admin login
 app.post('/api/admin/login', (req, res) => {
     const { password, telegramId } = req.body;
-
-    if (password !== ADMIN_PASSWORD) {
-        return res.status(401).json({ error: 'Invalid password' });
-    }
-
-    // If no admin set yet, this user becomes admin
+    if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Invalid password' });
     if (!ADMIN_TELEGRAM_ID && telegramId) {
         ADMIN_TELEGRAM_ID = telegramId.toString();
-        console.log(`✅ New admin set: ${ADMIN_TELEGRAM_ID}`);
-        return res.json({ 
-            success: true, 
-            isAdmin: true,
-            message: 'You are now the admin!'
-        });
+        return res.json({ success: true, isAdmin: true });
     }
-
-    // Check if this user is the existing admin
-    if (isAdmin(telegramId)) {
-        return res.json({ 
-            success: true, 
-            isAdmin: true,
-            message: 'Welcome back, admin!'
-        });
-    }
-
-    // Someone else is already admin
-    res.status(403).json({ 
-        error: 'Admin already set by another user',
-        isAdmin: false
-    });
+    if (isAdmin(telegramId)) return res.json({ success: true, isAdmin: true });
+    res.status(403).json({ error: 'Admin already set' });
 });
 
-// GET: Check admin status
 app.get('/api/admin/check', (req, res) => {
-    const telegramId = req.query.telegramId;
-    res.json({ 
-        isAdmin: isAdmin(telegramId),
-        hasAdmin: !!ADMIN_TELEGRAM_ID,
-        currentAdmin: ADMIN_TELEGRAM_ID // For debugging (remove in production)
-    });
+    res.json({ isAdmin: isAdmin(req.query.telegramId), hasAdmin: !!ADMIN_TELEGRAM_ID });
 });
 
-// POST: Change admin (requires current admin password)
-app.post('/api/admin/change', (req, res) => {
-    const { password, newAdminId } = req.body;
-
-    if (password !== ADMIN_PASSWORD) {
-        return res.status(401).json({ error: 'Invalid password' });
-    }
-
-    ADMIN_TELEGRAM_ID = newAdminId ? newAdminId.toString() : null;
-    console.log(`✅ Admin changed to: ${ADMIN_TELEGRAM_ID || 'None'}`);
-
-    res.json({ 
-        success: true, 
-        message: 'Admin changed successfully',
-        newAdmin: ADMIN_TELEGRAM_ID
-    });
-});
-
-// POST: Reset data (Admin only)
 app.post('/api/admin/reset', (req, res) => {
     const { password, telegramId } = req.body;
-
-    if (password !== ADMIN_PASSWORD) {
-        return res.status(401).json({ error: 'Invalid password' });
+    if (password !== ADMIN_PASSWORD || !isAdmin(telegramId)) {
+        return res.status(403).json({ error: 'Unauthorized' });
     }
-
-    if (!isAdmin(telegramId)) {
-        return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    state = {
-        totalDebtPaid: 0,
-        totalSalaryPaid: 0,
-        payments: [],
-        initialDebts: state.initialDebts
-    };
-
-    console.log('✅ Data reset by admin');
-    res.json({ success: true, message: 'Data reset successfully' });
+    state = { totalDebtPaid: 0, totalSalaryPaid: 0, payments: [], initialDebts: INITIAL_DEBTS };
+    res.json({ success: true });
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📱 Mini App: http://localhost:${PORT}`);
-    console.log(`📊 API: http://localhost:${PORT}/api/state`);
-    if (ADMIN_TELEGRAM_ID) {
-        console.log(`👤 Preset Admin ID: ${ADMIN_TELEGRAM_ID}`);
-    }
+app.listen(process.env.PORT || 10000, () => {
+    console.log('🚀 Partnership Calculator Server');
+    console.log('💰 Total Debt: ₹' + TOTAL_DEBT.toLocaleString());
+    console.log('📊 Salary Split: A=30%, B=30%, C=40%');
 });
