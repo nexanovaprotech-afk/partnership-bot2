@@ -96,7 +96,7 @@
             font-size: 15px;
         }
 
-        input[type="number"], input[type="password"] {
+        input[type="number"], input[type="password"], select {
             width: 100%;
             padding: 14px 16px;
             font-size: 18px;
@@ -106,9 +106,10 @@
             color: #333;
             font-weight: 600;
             transition: all 0.2s;
+            margin-bottom: 12px;
         }
 
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: #667eea;
             background: white;
@@ -144,6 +145,11 @@
             background: white;
             color: #667eea;
             border: 2px solid #667eea;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
         }
 
         .split-card {
@@ -252,6 +258,11 @@
             border-left: 4px solid #667eea;
         }
 
+        .history-item.extra-payment {
+            border-left: 4px solid #28a745;
+            background: #f0fff4;
+        }
+
         .history-amount {
             font-weight: 700;
             font-size: 18px;
@@ -352,6 +363,17 @@
             padding-left: 4px;
             border-left: 4px solid #667eea;
         }
+
+        .fifty-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -383,34 +405,61 @@
                 <span class="summary-label">Total Salary Paid:</span>
                 <span class="summary-value" id="totalSalaryPaid">₹0</span>
             </div>
+            <div class="summary-row">
+                <span class="summary-label">Total Extra Payments:</span>
+                <span class="summary-value" id="totalExtraPayments">₹0</span>
+            </div>
         </div>
 
+        <!-- Regular Payment Section -->
         <div id="paymentSection" class="hidden">
             <div class="input-card">
-                <div class="input-label">💰 Enter Payment Amount (₹)</div>
+                <div class="input-label">
+                    💰 Enter Payment Amount (₹)
+                    <span class="fifty-badge">50/50 Split</span>
+                </div>
                 <input type="number" id="paymentInput" placeholder="20000" min="0" step="0.01">
             </div>
             <button class="btn btn-primary" onclick="recordPayment()">
                 📝 Record Payment
             </button>
+
+            <!-- Extra Payment Section -->
+            <div class="input-card" style="margin-top: 20px;">
+                <div class="input-label">
+                    💳 Extra Payment (Optional)
+                </div>
+                <select id="extraPaymentPartner">
+                    <option value="">Select Partner</option>
+                    <option value="A">Bhargav</option>
+                    <option value="B">Sagar</option>
+                    <option value="C">Bharat</option>
+                </select>
+                <input type="number" id="extraPaymentAmount" placeholder="Amount (₹)" min="0" step="0.01">
+            </div>
+            <button class="btn btn-success" onclick="recordExtraPayment()">
+                💵 Record Extra Payment
+            </button>
         </div>
 
+        <!-- Payment Preview -->
         <div id="splitPreview" class="split-card hidden">
-            <div class="split-header">📊 Payment Breakdown</div>
+            <div class="split-header">📊 Payment Breakdown (50/50 Split)</div>
             <div class="split-row">
                 <span class="split-label">Total Payment:</span>
                 <span class="split-value" id="previewTotal">₹0</span>
             </div>
             <div class="split-row">
-                <span class="split-label">To Person X (Debt):</span>
+                <span class="split-label">To Person X (50%):</span>
                 <span class="split-value" id="previewPersonX">₹0</span>
             </div>
             <div class="split-row">
-                <span class="split-label">Salary Pool:</span>
+                <span class="split-label">Salary Pool (50%):</span>
                 <span class="split-value" id="previewSalary">₹0</span>
             </div>
         </div>
 
+        <!-- Partner Preview -->
         <div id="partnerPreview" class="hidden">
             <div class="section-title">👥 Partner Distribution</div>
 
@@ -475,6 +524,7 @@
             </div>
         </div>
 
+        <!-- Remaining Debts -->
         <div class="section-title">💰 Remaining Debts</div>
         <div class="partner-card">
             <div class="partner-header">👤 <span class="partner-name">Bhargav (A)</span></div>
@@ -485,6 +535,10 @@
             <div class="partner-row">
                 <span class="partner-label">Remaining:</span>
                 <span class="partner-value" id="debtA">₹68,500</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Extra Paid:</span>
+                <span class="partner-value" id="extraA">₹0</span>
             </div>
         </div>
 
@@ -498,6 +552,10 @@
                 <span class="partner-label">Remaining:</span>
                 <span class="partner-value" id="debtB">₹68,500</span>
             </div>
+            <div class="partner-row">
+                <span class="partner-label">Extra Paid:</span>
+                <span class="partner-value" id="extraB">₹0</span>
+            </div>
         </div>
 
         <div class="partner-card">
@@ -509,6 +567,10 @@
             <div class="partner-row">
                 <span class="partner-label">Remaining:</span>
                 <span class="partner-value" id="debtC">₹19,700</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Extra Paid:</span>
+                <span class="partner-value" id="extraC">₹0</span>
             </div>
         </div>
 
@@ -537,18 +599,8 @@
         tg.expand();
         tg.enableClosingConfirmation();
 
-        const INITIAL_DEBTS = {
-            A: 68500,
-            B: 68500,
-            C: 19700
-        };
-
-        const SALARY_SPLIT = {
-            A: 0.30,  // Bhargav 30%
-            B: 0.30,  // Sagar 30%
-            C: 0.40   // Bharat 40%
-        };
-
+        const INITIAL_DEBTS = { A: 68500, B: 68500, C: 19700 };
+        const SALARY_SPLIT = { A: 0.30, B: 0.30, C: 0.40 };
         const TOTAL_DEBT = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
 
         let isAdmin = false;
@@ -635,8 +687,10 @@
 
                 document.getElementById('totalDebtPaid').textContent = `₹${formatNumber(state.totalDebtPaid)}`;
                 document.getElementById('totalSalaryPaid').textContent = `₹${formatNumber(state.totalSalaryPaid)}`;
+                document.getElementById('totalExtraPayments').textContent = `₹${formatNumber(state.totalExtraPayments || 0)}`;
 
                 updateRemainingDebts(state.totalDebtPaid);
+                updateExtraPayments(state.extraPayments || { A: 0, B: 0, C: 0 });
             } catch (error) {
                 console.error('Error loading state:', error);
             }
@@ -652,6 +706,12 @@
             document.getElementById('debtC').textContent = `₹${formatNumber(debtC)}`;
         }
 
+        function updateExtraPayments(extraPayments) {
+            document.getElementById('extraA').textContent = `₹${formatNumber(extraPayments.A || 0)}`;
+            document.getElementById('extraB').textContent = `₹${formatNumber(extraPayments.B || 0)}`;
+            document.getElementById('extraC').textContent = `₹${formatNumber(extraPayments.C || 0)}`;
+        }
+
         async function calculatePreview() {
             const payment = parseFloat(document.getElementById('paymentInput').value) || 0;
 
@@ -663,15 +723,15 @@
 
             const state = await fetch(`${API_URL}/api/state`).then(r => r.json());
             const remainingDebt = Math.max(0, TOTAL_DEBT - state.totalDebtPaid);
-            const toPersonX = Math.min(payment, remainingDebt);
-            const toSalary = payment - toPersonX;
 
-            // Debt portions (proportional to initial debt)
+            // 50/50 SPLIT
+            const toPersonX = Math.min(payment * 0.5, remainingDebt);
+            const toSalary = payment * 0.5;
+
             const debtA = toPersonX * (INITIAL_DEBTS.A / TOTAL_DEBT);
             const debtB = toPersonX * (INITIAL_DEBTS.B / TOTAL_DEBT);
             const debtC = toPersonX * (INITIAL_DEBTS.C / TOTAL_DEBT);
 
-            // Salary portions (FIXED: 30% / 30% / 40%)
             const salaryA = toSalary * SALARY_SPLIT.A;
             const salaryB = toSalary * SALARY_SPLIT.B;
             const salaryC = toSalary * SALARY_SPLIT.C;
@@ -729,6 +789,40 @@
             }
         }
 
+        async function recordExtraPayment() {
+            if (!isAdmin) {
+                showAlert('⛔ Admin access required', 'error');
+                return;
+            }
+
+            const partner = document.getElementById('extraPaymentPartner').value;
+            const amount = parseFloat(document.getElementById('extraPaymentAmount').value);
+
+            if (!partner || !amount || amount <= 0) {
+                showAlert('⚠️ Select partner and enter amount', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/extra-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ partner, amount, recordedBy: userName, telegramId })
+                });
+
+                if (response.ok) {
+                    showAlert('✅ Extra payment recorded!', 'success');
+                    document.getElementById('extraPaymentPartner').value = '';
+                    document.getElementById('extraPaymentAmount').value = '';
+                    await loadState();
+                } else {
+                    showAlert('❌ Failed to record', 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Network error', 'error');
+            }
+        }
+
         let historyVisible = false;
         async function toggleHistory() {
             historyVisible = !historyVisible;
@@ -753,40 +847,56 @@
                 const list = document.getElementById('historyList');
                 if (data.history && data.history.length > 0) {
                     list.innerHTML = data.history.map(item => {
-                        const details = item.partnerDetails || calculatePartnerDetails(item);
-                        return `
-                            <div class="history-item">
-                                <div class="history-amount">₹${formatNumber(item.amount)}</div>
-                                <div class="history-split">
-                                    To Person X: ₹${formatNumber(item.toPersonX)} | 
-                                    Salary Pool: ₹${formatNumber(item.toSalary)}
-                                </div>
-                                <div class="history-partner-details">
-                                    <div class="history-partner-row">
-                                        <span>👤 Bhargav (30%):</span>
-                                        <span>Debt ₹${formatNumber(details.A.debt)} | Salary ₹${formatNumber(details.A.salary)}</span>
+                        if (item.type === 'extra') {
+                            const partnerNames = { A: 'Bhargav', B: 'Sagar', C: 'Bharat' };
+                            return `
+                                <div class="history-item extra-payment">
+                                    <div class="history-amount">💵 Extra: ₹${formatNumber(item.amount)}</div>
+                                    <div class="history-split">
+                                        Paid by: ${partnerNames[item.partner]}
                                     </div>
-                                    <div class="history-partner-row">
-                                        <span>👤 Sagar (30%):</span>
-                                        <span>Debt ₹${formatNumber(details.B.debt)} | Salary ₹${formatNumber(details.B.salary)}</span>
-                                    </div>
-                                    <div class="history-partner-row">
-                                        <span>👤 Bharat (40%):</span>
-                                        <span>Debt ₹${formatNumber(details.C.debt)} | Salary ₹${formatNumber(details.C.salary)}</span>
+                                    <div class="history-meta">
+                                        ${new Date(item.timestamp).toLocaleString('en-IN', { 
+                                            day: '2-digit', month: 'short', year: 'numeric', 
+                                            hour: '2-digit', minute: '2-digit' 
+                                        })}
+                                        ${item.recordedBy ? ' • ' + item.recordedBy : ''}
                                     </div>
                                 </div>
-                                <div class="history-meta">
-                                    ${new Date(item.timestamp).toLocaleString('en-IN', { 
-                                        day: '2-digit', 
-                                        month: 'short', 
-                                        year: 'numeric', 
-                                        hour: '2-digit', 
-                                        minute: '2-digit' 
-                                    })}
-                                    ${item.recordedBy ? ' • ' + item.recordedBy : ''}
+                            `;
+                        } else {
+                            const details = item.partnerDetails || calculatePartnerDetails(item);
+                            return `
+                                <div class="history-item">
+                                    <div class="history-amount">₹${formatNumber(item.amount)}</div>
+                                    <div class="history-split">
+                                        To Person X: ₹${formatNumber(item.toPersonX)} (50%) | 
+                                        Salary Pool: ₹${formatNumber(item.toSalary)} (50%)
+                                    </div>
+                                    <div class="history-partner-details">
+                                        <div class="history-partner-row">
+                                            <span>👤 Bhargav (30%):</span>
+                                            <span>Debt ₹${formatNumber(details.A.debt)} | Salary ₹${formatNumber(details.A.salary)}</span>
+                                        </div>
+                                        <div class="history-partner-row">
+                                            <span>👤 Sagar (30%):</span>
+                                            <span>Debt ₹${formatNumber(details.B.debt)} | Salary ₹${formatNumber(details.B.salary)}</span>
+                                        </div>
+                                        <div class="history-partner-row">
+                                            <span>👤 Bharat (40%):</span>
+                                            <span>Debt ₹${formatNumber(details.C.debt)} | Salary ₹${formatNumber(details.C.salary)}</span>
+                                        </div>
+                                    </div>
+                                    <div class="history-meta">
+                                        ${new Date(item.timestamp).toLocaleString('en-IN', { 
+                                            day: '2-digit', month: 'short', year: 'numeric', 
+                                            hour: '2-digit', minute: '2-digit' 
+                                        })}
+                                        ${item.recordedBy ? ' • ' + item.recordedBy : ''}
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        }
                     }).join('');
                 } else {
                     list.innerHTML = '<div style="text-align:center;color:#666;padding:20px;">No payments yet</div>';
