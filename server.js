@@ -1,177 +1,130 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
 const path = require('path');
-
 const app = express();
-const PORT = process.env.PORT || 10000;
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use(express.static('public'));
 
-// In-memory storage (persists while server runs)
-// For production, replace with MongoDB/PostgreSQL
-let data = {
-  debts: {
-    A: 68500,  // Bhargav
-    B: 68500,  // Sagar
-    C: 19700   // Bharat
-  },
-  totals: {
-    debtPaid: 0,
-    salaryPaid: 0
-  },
-  payments: [] // Array of all payment records
+// Admin configuration - CHANGE THIS PASSWORD!
+const ADMIN_TELEGRAM_ID = null; // Will be set on first admin login
+const ADMIN_PASSWORD = 'admin123'; // Change this!
+
+// In-memory storage
+let state = {
+    totalDebtPaid: 0,
+    totalSalaryPaid: 0,
+    payments: [],
+    initialDebts: {
+        A: 68500,  // Bhargav
+        B: 68500,  // Sagar
+        C: 19700   // Bharat
+    }
 };
 
-// Percentages
-const DEBT_PCT = { A: 46.2837837837, B: 46.2837837837, C: 7.43243243243 };
-const SALARY_PCT = { A: 13.7162162162, B: 13.7162162162, C: 72.5675675675 };
+// Check if user is admin
+function isAdmin(telegramId) {
+    if (!ADMIN_TELEGRAM_ID) return false;
+    return telegramId === ADMIN_TELEGRAM_ID;
+}
 
-// Routes
-
-// Get current state
+// GET: Current state
 app.get('/api/state', (req, res) => {
-  res.json(data);
+    res.json(state);
 });
 
-// Add new payment
-app.post('/api/payment', (req, res) => {
-  const { amount, user } = req.body;
-  const amt = parseFloat(amount);
-
-  if (!amt || amt <= 0) {
-    return res.status(400).json({ error: 'Invalid amount' });
-  }
-
-  // Calculate splits
-  const toX = amt * 0.5;
-  const salaryPool = amt * 0.5;
-
-  const aDebt = toX * (DEBT_PCT.A / 100);
-  const bDebt = toX * (DEBT_PCT.B / 100);
-  const cDebt = toX * (DEBT_PCT.C / 100);
-
-  const aSalary = salaryPool * (SALARY_PCT.A / 100);
-  const bSalary = salaryPool * (SALARY_PCT.B / 100);
-  const cSalary = salaryPool * (SALARY_PCT.C / 100);
-
-  // Update totals
-  const totalDebtThis = aDebt + bDebt + cDebt;
-  const totalSalaryThis = aSalary + bSalary + cSalary;
-
-  data.totals.debtPaid += totalDebtThis;
-  data.totals.salaryPaid += totalSalaryThis;
-
-  // Calculate remaining debts
-  const totalInit = data.debts.A + data.debts.B + data.debts.C || 1;
-  const shareA = data.debts.A / totalInit;
-  const shareB = data.debts.B / totalInit;
-  const shareC = data.debts.C / totalInit;
-
-  const aPaidTotal = data.totals.debtPaid * shareA;
-  const bPaidTotal = data.totals.debtPaid * shareB;
-  const cPaidTotal = data.totals.debtPaid * shareC;
-
-  const aRemain = Math.max(0, data.debts.A - aPaidTotal);
-  const bRemain = Math.max(0, data.debts.B - bPaidTotal);
-  const cRemain = Math.max(0, data.debts.C - cPaidTotal);
-
-  // Create payment record
-  const payment = {
-    id: Date.now(),
-    timestamp: new Date().toISOString(),
-    amount: amt,
-    toX: Math.round(toX),
-    salaryPool: Math.round(salaryPool),
-    splits: {
-      bhargav: {
-        debt: Math.round(aDebt),
-        salary: Math.round(aSalary),
-        net: Math.round(aSalary - aDebt),
-        remaining: Math.round(aRemain)
-      },
-      sagar: {
-        debt: Math.round(bDebt),
-        salary: Math.round(bSalary),
-        net: Math.round(bSalary - bDebt),
-        remaining: Math.round(bRemain)
-      },
-      bharat: {
-        debt: Math.round(cDebt),
-        salary: Math.round(cSalary),
-        net: Math.round(cSalary - cDebt),
-        remaining: Math.round(cRemain)
-      }
-    },
-    user: user || 'Unknown'
-  };
-
-  // Store payment
-  data.payments.unshift(payment); // Add to beginning
-  if (data.payments.length > 100) data.payments.pop(); // Keep last 100
-
-  res.json({
-    success: true,
-    payment: payment,
-    totals: {
-      debtPaid: Math.round(data.totals.debtPaid),
-      salaryPaid: Math.round(data.totals.salaryPaid)
-    }
-  });
-});
-
-// Get payment history
+// GET: Payment history
 app.get('/api/history', (req, res) => {
-  const limit = parseInt(req.query.limit) || 20;
-  res.json(data.payments.slice(0, limit));
+    const limit = parseInt(req.query.limit) || 50;
+    res.json({
+        history: state.payments.slice(-limit).reverse(),
+        totalDebtPaid: state.totalDebtPaid,
+        totalSalaryPaid: state.totalSalaryPaid
+    });
 });
 
-// Reset data (admin only - add auth in production)
-app.post('/api/reset', (req, res) => {
-  const { password } = req.body;
+// POST: Record payment (Admin only)
+app.post('/api/payment', (req, res) => {
+    const { amount, recordedBy, telegramId } = req.body;
 
-  if (password !== 'admin123') {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
+    if (!amount || amount <= 0) {
+        return res.status(400).json({ error: 'Invalid amount' });
+    }
 
-  data.totals.debtPaid = 0;
-  data.totals.salaryPaid = 0;
-  data.payments = [];
+    const totalDebt = state.initialDebts.A + state.initialDebts.B + state.initialDebts.C;
+    const remainingDebt = Math.max(0, totalDebt - state.totalDebtPaid);
+    const toPersonX = Math.min(amount, remainingDebt);
+    const toSalary = amount - toPersonX;
 
-  res.json({ success: true, message: 'Data reset successfully' });
+    state.totalDebtPaid += toPersonX;
+    state.totalSalaryPaid += toSalary;
+
+    state.payments.push({
+        amount: parseFloat(amount),
+        toPersonX,
+        toSalary,
+        recordedBy: recordedBy || 'Unknown',
+        timestamp: new Date().toISOString(),
+        telegramId
+    });
+
+    res.json({ 
+        success: true, 
+        state: {
+            totalDebtPaid: state.totalDebtPaid,
+            totalSalaryPaid: state.totalSalaryPaid
+        }
+    });
 });
 
-// Update debts (admin only)
-app.post('/api/update-debts', (req, res) => {
-  const { password, debts } = req.body;
+// POST: Admin login
+app.post('/api/admin/login', (req, res) => {
+    const { password, telegramId } = req.body;
 
-  if (password !== 'admin123') {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
+    if (password === ADMIN_PASSWORD) {
+        // First login sets the admin
+        if (!ADMIN_TELEGRAM_ID && telegramId) {
+            global.ADMIN_TELEGRAM_ID = telegramId;
+        }
 
-  if (debts.A) data.debts.A = parseFloat(debts.A);
-  if (debts.B) data.debts.B = parseFloat(debts.B);
-  if (debts.C) data.debts.C = parseFloat(debts.C);
-
-  res.json({ success: true, debts: data.debts });
+        res.json({ 
+            success: true, 
+            isAdmin: telegramId === ADMIN_TELEGRAM_ID 
+        });
+    } else {
+        res.status(401).json({ error: 'Invalid password' });
+    }
 });
 
-// Serve Mini App
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// GET: Check admin status
+app.get('/api/admin/check', (req, res) => {
+    const telegramId = req.query.telegramId;
+    res.json({ 
+        isAdmin: isAdmin(telegramId),
+        hasAdmin: !!ADMIN_TELEGRAM_ID
+    });
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// POST: Reset data (Admin only)
+app.post('/api/admin/reset', (req, res) => {
+    const { password, telegramId } = req.body;
+
+    if (password !== ADMIN_PASSWORD || !isAdmin(telegramId)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    state = {
+        totalDebtPaid: 0,
+        totalSalaryPaid: 0,
+        payments: [],
+        initialDebts: state.initialDebts
+    };
+
+    res.json({ success: true, message: 'Data reset successfully' });
 });
 
-// Start server
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Mini App: http://localhost:${PORT}`);
-  console.log(`📊 API: http://localhost:${PORT}/api/state`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 Mini App: http://localhost:${PORT}`);
+    console.log(`📊 API: http://localhost:${PORT}/api/state`);
 });
