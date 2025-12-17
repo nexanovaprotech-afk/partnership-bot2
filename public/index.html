@@ -96,10 +96,6 @@
             font-size: 15px;
         }
 
-        .input-wrapper {
-            position: relative;
-        }
-
         input[type="number"], input[type="password"] {
             width: 100%;
             padding: 14px 16px;
@@ -203,11 +199,11 @@
             align-items: center;
             gap: 8px;
             margin-bottom: 12px;
+            font-size: 18px;
         }
 
         .partner-name {
             font-weight: 700;
-            font-size: 16px;
             color: #333;
         }
 
@@ -227,6 +223,12 @@
             color: #333;
         }
 
+        .percentage {
+            color: #667eea;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+
         .history-card {
             background: white;
             border-radius: 12px;
@@ -239,26 +241,48 @@
             font-weight: 700;
             margin-bottom: 12px;
             color: #333;
+            font-size: 18px;
         }
 
         .history-item {
-            padding: 12px;
+            padding: 16px;
             background: #fafafa;
             border-radius: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             border-left: 4px solid #667eea;
         }
 
         .history-amount {
             font-weight: 700;
-            font-size: 16px;
+            font-size: 18px;
             color: #333;
+            margin-bottom: 8px;
+        }
+
+        .history-split {
+            font-size: 13px;
+            color: #666;
             margin-bottom: 4px;
+        }
+
+        .history-partner-details {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+
+        .history-partner-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 4px 0;
         }
 
         .history-meta {
             font-size: 12px;
-            color: #666;
+            color: #999;
+            margin-top: 8px;
         }
 
         .alert {
@@ -277,11 +301,6 @@
 
         .alert-error {
             background: #f44336;
-            color: white;
-        }
-
-        .alert-info {
-            background: #2196F3;
             color: white;
         }
 
@@ -311,12 +330,6 @@
             display: none !important;
         }
 
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-
         .admin-section {
             background: #fff3cd;
             border: 2px solid #ffc107;
@@ -330,6 +343,15 @@
             color: #856404;
             margin-bottom: 12px;
         }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+            margin: 24px 0 16px 0;
+            padding-left: 4px;
+            border-left: 4px solid #667eea;
+        }
     </style>
 </head>
 <body>
@@ -342,10 +364,8 @@
     </div>
 
     <div class="container">
-        <!-- Alert Messages -->
         <div id="alertContainer"></div>
 
-        <!-- Admin Login (First Time) -->
         <div id="adminLoginSection" class="admin-section hidden">
             <div class="admin-title">🔐 Admin Access</div>
             <input type="password" id="adminPassword" placeholder="Enter admin password">
@@ -354,7 +374,6 @@
             </button>
         </div>
 
-        <!-- Summary Card -->
         <div class="summary-card">
             <div class="summary-row">
                 <span class="summary-label">Total Debt Paid to X:</span>
@@ -366,52 +385,52 @@
             </div>
         </div>
 
-        <!-- Payment Input (Admin Only) -->
         <div id="paymentSection" class="hidden">
             <div class="input-card">
-                <div class="input-label">
-                    💰 Enter Payment Amount (₹)
-                </div>
+                <div class="input-label">💰 Enter Payment Amount (₹)</div>
                 <input type="number" id="paymentInput" placeholder="20000" min="0" step="0.01">
             </div>
-
             <button class="btn btn-primary" onclick="recordPayment()">
                 📝 Record Payment
             </button>
         </div>
 
-        <!-- Current Split Preview -->
         <div id="splitPreview" class="split-card hidden">
-            <div class="split-header">
-                📊 Current Payment Split
-            </div>
+            <div class="split-header">📊 Payment Breakdown</div>
             <div class="split-row">
                 <span class="split-label">Total Payment:</span>
-                <span class="split-value" id="splitTotal">₹0</span>
+                <span class="split-value" id="previewTotal">₹0</span>
             </div>
             <div class="split-row">
-                <span class="split-label">To Person X (50%):</span>
-                <span class="split-value" id="splitPersonX">₹0</span>
+                <span class="split-label">To Person X (Debt):</span>
+                <span class="split-value" id="previewPersonX">₹0</span>
             </div>
             <div class="split-row">
-                <span class="split-label">Salary Pool (50%):</span>
-                <span class="split-value" id="splitSalary">₹0</span>
+                <span class="split-label">Salary Pool:</span>
+                <span class="split-value" id="previewSalary">₹0</span>
             </div>
         </div>
 
-        <!-- Partner Details -->
-        <div id="partnerDetails">
+        <div id="partnerPreview" class="hidden">
+            <div class="section-title">👥 Partner Distribution</div>
+
             <div class="partner-card">
                 <div class="partner-header">
                     👤 <span class="partner-name">Bhargav (A)</span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Initial Debt:</span>
-                    <span class="partner-value">₹68,500</span>
+                    <span class="partner-label">Debt Cleared:</span>
+                    <span class="partner-value">
+                        ₹<span id="previewDebtA">0</span>
+                        <span class="percentage">(<span id="previewDebtPercA">0</span>%)</span>
+                    </span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Remaining Debt:</span>
-                    <span class="partner-value" id="debtA">₹68,500</span>
+                    <span class="partner-label">Salary Received:</span>
+                    <span class="partner-value">
+                        ₹<span id="previewSalaryA">0</span>
+                        <span class="percentage">(30%)</span>
+                    </span>
                 </div>
             </div>
 
@@ -420,12 +439,18 @@
                     👤 <span class="partner-name">Sagar (B)</span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Initial Debt:</span>
-                    <span class="partner-value">₹68,500</span>
+                    <span class="partner-label">Debt Cleared:</span>
+                    <span class="partner-value">
+                        ₹<span id="previewDebtB">0</span>
+                        <span class="percentage">(<span id="previewDebtPercB">0</span>%)</span>
+                    </span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Remaining Debt:</span>
-                    <span class="partner-value" id="debtB">₹68,500</span>
+                    <span class="partner-label">Salary Received:</span>
+                    <span class="partner-value">
+                        ₹<span id="previewSalaryB">0</span>
+                        <span class="percentage">(30%)</span>
+                    </span>
                 </div>
             </div>
 
@@ -434,30 +459,70 @@
                     👤 <span class="partner-name">Bharat (C)</span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Initial Debt:</span>
-                    <span class="partner-value">₹19,700</span>
+                    <span class="partner-label">Debt Cleared:</span>
+                    <span class="partner-value">
+                        ₹<span id="previewDebtC">0</span>
+                        <span class="percentage">(<span id="previewDebtPercC">0</span>%)</span>
+                    </span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Remaining Debt:</span>
-                    <span class="partner-value" id="debtC">₹19,700</span>
+                    <span class="partner-label">Salary Received:</span>
+                    <span class="partner-value">
+                        ₹<span id="previewSalaryC">0</span>
+                        <span class="percentage">(40%)</span>
+                    </span>
                 </div>
             </div>
         </div>
 
-        <!-- View History Button -->
+        <div class="section-title">💰 Remaining Debts</div>
+        <div class="partner-card">
+            <div class="partner-header">👤 <span class="partner-name">Bhargav (A)</span></div>
+            <div class="partner-row">
+                <span class="partner-label">Initial Debt:</span>
+                <span class="partner-value">₹68,500</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Remaining:</span>
+                <span class="partner-value" id="debtA">₹68,500</span>
+            </div>
+        </div>
+
+        <div class="partner-card">
+            <div class="partner-header">👤 <span class="partner-name">Sagar (B)</span></div>
+            <div class="partner-row">
+                <span class="partner-label">Initial Debt:</span>
+                <span class="partner-value">₹68,500</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Remaining:</span>
+                <span class="partner-value" id="debtB">₹68,500</span>
+            </div>
+        </div>
+
+        <div class="partner-card">
+            <div class="partner-header">👤 <span class="partner-name">Bharat (C)</span></div>
+            <div class="partner-row">
+                <span class="partner-label">Initial Debt:</span>
+                <span class="partner-value">₹19,700</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Remaining:</span>
+                <span class="partner-value" id="debtC">₹19,700</span>
+            </div>
+        </div>
+
         <button class="btn btn-secondary" onclick="toggleHistory()">
-            📜 <span id="historyBtnText">View History</span>
+            📜 <span id="historyBtnText">View Payment History</span>
         </button>
 
-        <!-- History Section -->
         <div id="historySection" class="hidden">
             <div class="history-card">
-                <div class="history-header">Recent Payments</div>
+                <div class="history-header">📅 Payment History</div>
                 <div id="historyList"></div>
             </div>
         </div>
 
-        <!-- Admin Controls -->
         <div id="adminControls" class="hidden admin-section">
             <div class="admin-title">⚙️ Admin Controls</div>
             <button class="btn btn-secondary" onclick="resetData()">
@@ -478,11 +543,18 @@
             C: 19700
         };
 
+        const SALARY_SPLIT = {
+            A: 0.30,  // Bhargav 30%
+            B: 0.30,  // Sagar 30%
+            C: 0.40   // Bharat 40%
+        };
+
+        const TOTAL_DEBT = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
+
         let isAdmin = false;
         let telegramId = tg.initDataUnsafe?.user?.id || null;
         let userName = tg.initDataUnsafe?.user?.first_name || 'User';
 
-        // Initialize
         async function init() {
             await checkAdminStatus();
             await loadState();
@@ -490,7 +562,7 @@
         }
 
         function setupEventListeners() {
-            document.getElementById('paymentInput').addEventListener('input', calculateSplit);
+            document.getElementById('paymentInput').addEventListener('input', calculatePreview);
         }
 
         async function checkAdminStatus() {
@@ -498,18 +570,15 @@
                 const response = await fetch(`${API_URL}/api/admin/check?telegramId=${telegramId}`);
                 const data = await response.json();
                 isAdmin = data.isAdmin;
-
                 if (isAdmin) {
                     showAdminUI();
                 } else if (!data.hasAdmin) {
-                    // No admin set yet, show login
                     document.getElementById('adminLoginSection').classList.remove('hidden');
                 } else {
-                    // Regular user - hide admin features
                     showUserUI();
                 }
             } catch (error) {
-                console.error('Error checking admin status:', error);
+                console.error('Error checking admin:', error);
             }
         }
 
@@ -548,7 +617,7 @@
                         showAlert('✅ Admin access granted!', 'success');
                         showAdminUI();
                     } else {
-                        showAlert('❌ Admin already set by another user', 'error');
+                        showAlert('❌ Admin already set', 'error');
                         showUserUI();
                     }
                 } else {
@@ -574,34 +643,57 @@
         }
 
         function updateRemainingDebts(totalPaid) {
-            const totalDebt = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
-            const debtA = Math.max(0, INITIAL_DEBTS.A - (totalPaid * (INITIAL_DEBTS.A / totalDebt)));
-            const debtB = Math.max(0, INITIAL_DEBTS.B - (totalPaid * (INITIAL_DEBTS.B / totalDebt)));
-            const debtC = Math.max(0, INITIAL_DEBTS.C - (totalPaid * (INITIAL_DEBTS.C / totalDebt)));
+            const debtA = Math.max(0, INITIAL_DEBTS.A - (totalPaid * (INITIAL_DEBTS.A / TOTAL_DEBT)));
+            const debtB = Math.max(0, INITIAL_DEBTS.B - (totalPaid * (INITIAL_DEBTS.B / TOTAL_DEBT)));
+            const debtC = Math.max(0, INITIAL_DEBTS.C - (totalPaid * (INITIAL_DEBTS.C / TOTAL_DEBT)));
 
             document.getElementById('debtA').textContent = `₹${formatNumber(debtA)}`;
             document.getElementById('debtB').textContent = `₹${formatNumber(debtB)}`;
             document.getElementById('debtC').textContent = `₹${formatNumber(debtC)}`;
         }
 
-        async function calculateSplit() {
+        async function calculatePreview() {
             const payment = parseFloat(document.getElementById('paymentInput').value) || 0;
 
             if (payment <= 0) {
                 document.getElementById('splitPreview').classList.add('hidden');
+                document.getElementById('partnerPreview').classList.add('hidden');
                 return;
             }
 
             const state = await fetch(`${API_URL}/api/state`).then(r => r.json());
-            const totalDebt = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
-            const remainingDebt = Math.max(0, totalDebt - state.totalDebtPaid);
+            const remainingDebt = Math.max(0, TOTAL_DEBT - state.totalDebtPaid);
             const toPersonX = Math.min(payment, remainingDebt);
             const toSalary = payment - toPersonX;
 
-            document.getElementById('splitTotal').textContent = `₹${formatNumber(payment)}`;
-            document.getElementById('splitPersonX').textContent = `₹${formatNumber(toPersonX)}`;
-            document.getElementById('splitSalary').textContent = `₹${formatNumber(toSalary)}`;
+            // Debt portions (proportional to initial debt)
+            const debtA = toPersonX * (INITIAL_DEBTS.A / TOTAL_DEBT);
+            const debtB = toPersonX * (INITIAL_DEBTS.B / TOTAL_DEBT);
+            const debtC = toPersonX * (INITIAL_DEBTS.C / TOTAL_DEBT);
+
+            // Salary portions (FIXED: 30% / 30% / 40%)
+            const salaryA = toSalary * SALARY_SPLIT.A;
+            const salaryB = toSalary * SALARY_SPLIT.B;
+            const salaryC = toSalary * SALARY_SPLIT.C;
+
+            document.getElementById('previewTotal').textContent = `₹${formatNumber(payment)}`;
+            document.getElementById('previewPersonX').textContent = `₹${formatNumber(toPersonX)}`;
+            document.getElementById('previewSalary').textContent = `₹${formatNumber(toSalary)}`;
+
+            document.getElementById('previewDebtA').textContent = formatNumber(debtA);
+            document.getElementById('previewDebtPercA').textContent = ((debtA / toPersonX) * 100).toFixed(2);
+            document.getElementById('previewSalaryA').textContent = formatNumber(salaryA);
+
+            document.getElementById('previewDebtB').textContent = formatNumber(debtB);
+            document.getElementById('previewDebtPercB').textContent = ((debtB / toPersonX) * 100).toFixed(2);
+            document.getElementById('previewSalaryB').textContent = formatNumber(salaryB);
+
+            document.getElementById('previewDebtC').textContent = formatNumber(debtC);
+            document.getElementById('previewDebtPercC').textContent = ((debtC / toPersonX) * 100).toFixed(2);
+            document.getElementById('previewSalaryC').textContent = formatNumber(salaryC);
+
             document.getElementById('splitPreview').classList.remove('hidden');
+            document.getElementById('partnerPreview').classList.remove('hidden');
         }
 
         async function recordPayment() {
@@ -611,9 +703,8 @@
             }
 
             const amount = parseFloat(document.getElementById('paymentInput').value);
-
             if (!amount || amount <= 0) {
-                showAlert('⚠️ Please enter valid amount', 'error');
+                showAlert('⚠️ Enter valid amount', 'error');
                 return;
             }
 
@@ -621,20 +712,17 @@
                 const response = await fetch(`${API_URL}/api/payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        amount,
-                        recordedBy: userName,
-                        telegramId
-                    })
+                    body: JSON.stringify({ amount, recordedBy: userName, telegramId })
                 });
 
                 if (response.ok) {
-                    showAlert('✅ Payment recorded successfully!', 'success');
+                    showAlert('✅ Payment recorded!', 'success');
                     document.getElementById('paymentInput').value = '';
                     document.getElementById('splitPreview').classList.add('hidden');
+                    document.getElementById('partnerPreview').classList.add('hidden');
                     await loadState();
                 } else {
-                    showAlert('❌ Failed to record payment', 'error');
+                    showAlert('❌ Failed to record', 'error');
                 }
             } catch (error) {
                 showAlert('❌ Network error', 'error');
@@ -650,29 +738,56 @@
             if (historyVisible) {
                 await loadHistory();
                 section.classList.remove('hidden');
-                btnText.textContent = 'Hide History';
+                btnText.textContent = 'Hide Payment History';
             } else {
                 section.classList.add('hidden');
-                btnText.textContent = 'View History';
+                btnText.textContent = 'View Payment History';
             }
         }
 
         async function loadHistory() {
             try {
-                const response = await fetch(`${API_URL}/api/history?limit=20`);
+                const response = await fetch(`${API_URL}/api/history?limit=50`);
                 const data = await response.json();
 
                 const list = document.getElementById('historyList');
                 if (data.history && data.history.length > 0) {
-                    list.innerHTML = data.history.map(item => `
-                        <div class="history-item">
-                            <div class="history-amount">₹${formatNumber(item.amount)}</div>
-                            <div class="history-meta">
-                                ${new Date(item.timestamp).toLocaleString('en-IN')}
-                                ${item.recordedBy ? ' • ' + item.recordedBy : ''}
+                    list.innerHTML = data.history.map(item => {
+                        const details = item.partnerDetails || calculatePartnerDetails(item);
+                        return `
+                            <div class="history-item">
+                                <div class="history-amount">₹${formatNumber(item.amount)}</div>
+                                <div class="history-split">
+                                    To Person X: ₹${formatNumber(item.toPersonX)} | 
+                                    Salary Pool: ₹${formatNumber(item.toSalary)}
+                                </div>
+                                <div class="history-partner-details">
+                                    <div class="history-partner-row">
+                                        <span>👤 Bhargav (30%):</span>
+                                        <span>Debt ₹${formatNumber(details.A.debt)} | Salary ₹${formatNumber(details.A.salary)}</span>
+                                    </div>
+                                    <div class="history-partner-row">
+                                        <span>👤 Sagar (30%):</span>
+                                        <span>Debt ₹${formatNumber(details.B.debt)} | Salary ₹${formatNumber(details.B.salary)}</span>
+                                    </div>
+                                    <div class="history-partner-row">
+                                        <span>👤 Bharat (40%):</span>
+                                        <span>Debt ₹${formatNumber(details.C.debt)} | Salary ₹${formatNumber(details.C.salary)}</span>
+                                    </div>
+                                </div>
+                                <div class="history-meta">
+                                    ${new Date(item.timestamp).toLocaleString('en-IN', { 
+                                        day: '2-digit', 
+                                        month: 'short', 
+                                        year: 'numeric', 
+                                        hour: '2-digit', 
+                                        minute: '2-digit' 
+                                    })}
+                                    ${item.recordedBy ? ' • ' + item.recordedBy : ''}
+                                </div>
                             </div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 } else {
                     list.innerHTML = '<div style="text-align:center;color:#666;padding:20px;">No payments yet</div>';
                 }
@@ -681,14 +796,27 @@
             }
         }
 
+        function calculatePartnerDetails(item) {
+            const debtA = item.toPersonX * (INITIAL_DEBTS.A / TOTAL_DEBT);
+            const debtB = item.toPersonX * (INITIAL_DEBTS.B / TOTAL_DEBT);
+            const debtC = item.toPersonX * (INITIAL_DEBTS.C / TOTAL_DEBT);
+
+            const salaryA = item.toSalary * SALARY_SPLIT.A;
+            const salaryB = item.toSalary * SALARY_SPLIT.B;
+            const salaryC = item.toSalary * SALARY_SPLIT.C;
+
+            return {
+                A: { debt: debtA, salary: salaryA },
+                B: { debt: debtB, salary: salaryB },
+                C: { debt: debtC, salary: salaryC }
+            };
+        }
+
         async function resetData() {
             if (!isAdmin) return;
+            if (!confirm('⚠️ Delete ALL payment data?')) return;
 
-            if (!confirm('⚠️ Are you sure? This will delete ALL payment data!')) {
-                return;
-            }
-
-            const password = prompt('Enter admin password to confirm:');
+            const password = prompt('Enter admin password:');
             if (!password) return;
 
             try {
@@ -699,7 +827,7 @@
                 });
 
                 if (response.ok) {
-                    showAlert('✅ All data reset successfully', 'success');
+                    showAlert('✅ Data reset', 'success');
                     await loadState();
                     document.getElementById('historySection').classList.add('hidden');
                     historyVisible = false;
@@ -717,17 +845,13 @@
             alert.className = `alert alert-${type}`;
             alert.textContent = message;
             container.appendChild(alert);
-
-            setTimeout(() => {
-                alert.remove();
-            }, 3000);
+            setTimeout(() => alert.remove(), 3000);
         }
 
         function formatNumber(num) {
             return num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         }
 
-        // Initialize on load
         init();
     </script>
 </body>
