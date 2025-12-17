@@ -27,6 +27,8 @@ const TOTAL_DEBT = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
 let state = {
     totalDebtPaid: 0,
     totalSalaryPaid: 0,
+    totalExtraPayments: 0,
+    extraPayments: { A: 0, B: 0, C: 0 },
     payments: [],
     initialDebts: INITIAL_DEBTS
 };
@@ -42,7 +44,7 @@ function calculatePartnerDetails(toPersonX, toSalary) {
     const debtB = toPersonX * (INITIAL_DEBTS.B / TOTAL_DEBT);
     const debtC = toPersonX * (INITIAL_DEBTS.C / TOTAL_DEBT);
 
-    // Salary portions (FIXED: 30% / 30% / 40%)
+    // Salary portions (30% / 30% / 40%)
     const salaryA = toSalary * SALARY_SPLIT.A;
     const salaryB = toSalary * SALARY_SPLIT.B;
     const salaryC = toSalary * SALARY_SPLIT.C;
@@ -63,10 +65,13 @@ app.get('/api/history', (req, res) => {
     res.json({
         history: state.payments.slice(-limit).reverse(),
         totalDebtPaid: state.totalDebtPaid,
-        totalSalaryPaid: state.totalSalaryPaid
+        totalSalaryPaid: state.totalSalaryPaid,
+        totalExtraPayments: state.totalExtraPayments,
+        extraPayments: state.extraPayments
     });
 });
 
+// POST: Record regular payment with 50/50 split
 app.post('/api/payment', (req, res) => {
     const { amount, recordedBy, telegramId } = req.body;
 
@@ -79,8 +84,10 @@ app.post('/api/payment', (req, res) => {
     }
 
     const remainingDebt = Math.max(0, TOTAL_DEBT - state.totalDebtPaid);
-    const toPersonX = Math.min(amount, remainingDebt);
-    const toSalary = amount - toPersonX;
+
+    // 50/50 SPLIT FORMULA
+    const toPersonX = Math.min(amount * 0.5, remainingDebt);
+    const toSalary = amount * 0.5;
 
     const partnerDetails = calculatePartnerDetails(toPersonX, toSalary);
 
@@ -88,6 +95,7 @@ app.post('/api/payment', (req, res) => {
     state.totalSalaryPaid += toSalary;
 
     state.payments.push({
+        type: 'regular',
         amount: parseFloat(amount),
         toPersonX,
         toSalary,
@@ -97,12 +105,53 @@ app.post('/api/payment', (req, res) => {
         telegramId
     });
 
-    console.log(`💰 Payment: ₹${amount} | Debt: ₹${toPersonX} | Salary: ₹${toSalary}`);
-    console.log(`   A: Debt ₹${partnerDetails.A.debt.toFixed(2)} + Salary ₹${partnerDetails.A.salary.toFixed(2)}`);
-    console.log(`   B: Debt ₹${partnerDetails.B.debt.toFixed(2)} + Salary ₹${partnerDetails.B.salary.toFixed(2)}`);
-    console.log(`   C: Debt ₹${partnerDetails.C.debt.toFixed(2)} + Salary ₹${partnerDetails.C.salary.toFixed(2)}`);
+    console.log(`💰 Payment: ₹${amount} | Debt (50%): ₹${toPersonX} | Salary (50%): ₹${toSalary}`);
 
-    res.json({ success: true, state: { totalDebtPaid: state.totalDebtPaid, totalSalaryPaid: state.totalSalaryPaid } });
+    res.json({ 
+        success: true, 
+        state: { 
+            totalDebtPaid: state.totalDebtPaid, 
+            totalSalaryPaid: state.totalSalaryPaid 
+        } 
+    });
+});
+
+// POST: Record extra payment by partner
+app.post('/api/extra-payment', (req, res) => {
+    const { partner, amount, recordedBy, telegramId } = req.body;
+
+    if (!isAdmin(telegramId)) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (!partner || !amount || amount <= 0) {
+        return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    if (!['A', 'B', 'C'].includes(partner)) {
+        return res.status(400).json({ error: 'Invalid partner' });
+    }
+
+    state.extraPayments[partner] += parseFloat(amount);
+    state.totalExtraPayments += parseFloat(amount);
+
+    state.payments.push({
+        type: 'extra',
+        partner,
+        amount: parseFloat(amount),
+        recordedBy: recordedBy || 'Unknown',
+        timestamp: new Date().toISOString(),
+        telegramId
+    });
+
+    const partnerNames = { A: 'Bhargav', B: 'Sagar', C: 'Bharat' };
+    console.log(`💵 Extra Payment: ₹${amount} by ${partnerNames[partner]}`);
+
+    res.json({ 
+        success: true, 
+        extraPayments: state.extraPayments,
+        totalExtraPayments: state.totalExtraPayments
+    });
 });
 
 app.post('/api/admin/login', (req, res) => {
@@ -125,12 +174,20 @@ app.post('/api/admin/reset', (req, res) => {
     if (password !== ADMIN_PASSWORD || !isAdmin(telegramId)) {
         return res.status(403).json({ error: 'Unauthorized' });
     }
-    state = { totalDebtPaid: 0, totalSalaryPaid: 0, payments: [], initialDebts: INITIAL_DEBTS };
+    state = { 
+        totalDebtPaid: 0, 
+        totalSalaryPaid: 0, 
+        totalExtraPayments: 0,
+        extraPayments: { A: 0, B: 0, C: 0 },
+        payments: [], 
+        initialDebts: INITIAL_DEBTS 
+    };
     res.json({ success: true });
 });
 
 app.listen(process.env.PORT || 10000, () => {
     console.log('🚀 Partnership Calculator Server');
     console.log('💰 Total Debt: ₹' + TOTAL_DEBT.toLocaleString());
-    console.log('📊 Salary Split: A=30%, B=30%, C=40%');
+    console.log('📊 Split: 50% to X | 50% Salary Pool');
+    console.log('💼 Salary: A=30%, B=30%, C=40%');
 });
