@@ -16,7 +16,7 @@ A professional partnership payment calculator with admin controls and payment hi
 
 ### Admin Setup
 1. First person to enter correct password becomes admin
-2. Default password: `admin123`
+2. Default password:
 3. Change password in `server.js` line 9:
    ```javascript
    const ADMIN_PASSWORD = 'your_secure_password_here';
