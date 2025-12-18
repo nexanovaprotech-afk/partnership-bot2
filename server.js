@@ -10,10 +10,11 @@ const PRESET_ADMIN_ID = null;
 
 let ADMIN_TELEGRAM_ID = PRESET_ADMIN_ID;
 
+// UPDATED DEBT AMOUNTS (Reduced by 2250 each)
 const INITIAL_DEBTS = {
-    A: 68500,  // Bhargav
-    B: 68500,  // Sagar
-    C: 19700   // Bharat
+    A: 66250,  // Bhargav (was 68500, reduced by 2250)
+    B: 66250,  // Sagar (was 68500, reduced by 2250)
+    C: 17450   // Bharat (was 19700, reduced by 2250)
 };
 
 const SALARY_SPLIT = {
@@ -106,6 +107,7 @@ app.post('/api/payment', (req, res) => {
     });
 
     console.log(`💰 Payment: ₹${amount} | Debt (50%): ₹${toPersonX} | Salary (50%): ₹${toSalary}`);
+    console.log(`   Remaining Total Debt: ₹${(TOTAL_DEBT - state.totalDebtPaid).toLocaleString()}`);
 
     res.json({ 
         success: true, 
@@ -188,6 +190,9 @@ app.post('/api/admin/reset', (req, res) => {
 app.listen(process.env.PORT || 10000, () => {
     console.log('🚀 Partnership Calculator Server');
     console.log('💰 Total Debt: ₹' + TOTAL_DEBT.toLocaleString());
+    console.log('   • Bhargav: ₹66,250');
+    console.log('   • Sagar: ₹66,250');
+    console.log('   • Bharat: ₹17,450');
     console.log('📊 Split: 50% to X | 50% Salary Pool');
     console.log('💼 Salary: A=30%, B=30%, C=40%');
 });
