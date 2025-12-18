@@ -23,9 +23,9 @@ A professional partnership payment calculator with admin controls and payment hi
    ```
 
 ### Partner Details
-- ** (A)**: ₹68,500 debt
-- ** (B)**: ₹68,500 debt  
-- ** (C)**: ₹19,700 debt
+- ** (A)**: ₹66,250 debt
+- ** (B)**: ₹66,250 debt  
+- ** (C)**: ₹17,450 debt
 - **Person X**: Receives 50% until all debt paid
 
 ## Deployment
