@@ -476,7 +476,7 @@
 
         <!-- Payment Preview -->
         <div id="splitPreview" class="split-card hidden">
-            <div class="split-header">📊 Payment Breakdown (50/50 Split)</div>
+            <div class="split-header">📊 Payment Breakdown</div>
             <div class="split-row">
                 <span class="split-label">Total Payment:</span>
                 <span class="split-value" id="previewTotal">₹0</span>
@@ -486,8 +486,12 @@
                 <span class="split-value" id="previewPersonX">₹0</span>
             </div>
             <div class="split-row">
-                <span class="split-label">Salary Pool (50%):</span>
+                <span class="split-label">Total Salary (50%):</span>
                 <span class="split-value" id="previewSalary">₹0</span>
+            </div>
+            <div class="split-row">
+                <span class="split-label">Debt Clear Rate:</span>
+                <span class="split-value" id="previewClearRate">0%</span>
             </div>
         </div>
 
@@ -497,61 +501,55 @@
 
             <div class="partner-card">
                 <div class="partner-header">
-                    👤 <span class="partner-name">Bhargav (A)</span>
+                    👤 <span class="partner-name">Bhargav (A) - 30%</span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Debt Cleared:</span>
-                    <span class="partner-value">
-                        ₹<span id="previewDebtA">0</span>
-                        <span class="percentage">(<span id="previewDebtPercA">0</span>%)</span>
-                    </span>
+                    <span class="partner-label">Share Amount:</span>
+                    <span class="partner-value">₹<span id="previewShareA">0</span></span>
+                </div>
+                <div class="partner-row">
+                    <span class="partner-label">Debt Payment:</span>
+                    <span class="partner-value">₹<span id="previewDebtA">0</span></span>
                 </div>
                 <div class="partner-row">
                     <span class="partner-label">Salary Received:</span>
-                    <span class="partner-value">
-                        ₹<span id="previewSalaryA">0</span>
-                        <span class="percentage">(30%)</span>
-                    </span>
+                    <span class="partner-value">₹<span id="previewSalaryA">0</span></span>
                 </div>
             </div>
 
             <div class="partner-card">
                 <div class="partner-header">
-                    👤 <span class="partner-name">Sagar (B)</span>
+                    👤 <span class="partner-name">Sagar (B) - 30%</span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Debt Cleared:</span>
-                    <span class="partner-value">
-                        ₹<span id="previewDebtB">0</span>
-                        <span class="percentage">(<span id="previewDebtPercB">0</span>%)</span>
-                    </span>
+                    <span class="partner-label">Share Amount:</span>
+                    <span class="partner-value">₹<span id="previewShareB">0</span></span>
+                </div>
+                <div class="partner-row">
+                    <span class="partner-label">Debt Payment:</span>
+                    <span class="partner-value">₹<span id="previewDebtB">0</span></span>
                 </div>
                 <div class="partner-row">
                     <span class="partner-label">Salary Received:</span>
-                    <span class="partner-value">
-                        ₹<span id="previewSalaryB">0</span>
-                        <span class="percentage">(30%)</span>
-                    </span>
+                    <span class="partner-value">₹<span id="previewSalaryB">0</span></span>
                 </div>
             </div>
 
             <div class="partner-card">
                 <div class="partner-header">
-                    👤 <span class="partner-name">Bharat (C)</span>
+                    👤 <span class="partner-name">Bharat (C) - 40%</span>
                 </div>
                 <div class="partner-row">
-                    <span class="partner-label">Debt Cleared:</span>
-                    <span class="partner-value">
-                        ₹<span id="previewDebtC">0</span>
-                        <span class="percentage">(<span id="previewDebtPercC">0</span>%)</span>
-                    </span>
+                    <span class="partner-label">Share Amount:</span>
+                    <span class="partner-value">₹<span id="previewShareC">0</span></span>
+                </div>
+                <div class="partner-row">
+                    <span class="partner-label">Debt Payment:</span>
+                    <span class="partner-value">₹<span id="previewDebtC">0</span></span>
                 </div>
                 <div class="partner-row">
                     <span class="partner-label">Salary Received:</span>
-                    <span class="partner-value">
-                        ₹<span id="previewSalaryC">0</span>
-                        <span class="percentage">(40%)</span>
-                    </span>
+                    <span class="partner-value">₹<span id="previewSalaryC">0</span></span>
                 </div>
             </div>
         </div>
@@ -632,7 +630,7 @@
         tg.enableClosingConfirmation();
 
         const INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
-        const SALARY_SPLIT = { A: 0.30, B: 0.30, C: 0.40 };
+        const SHAREHOLDING = { A: 0.30, B: 0.30, C: 0.40 };
         const TOTAL_DEBT = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
 
         let isAdmin = false;
@@ -734,10 +732,18 @@
         }
 
         function updateRemainingDebts(totalPaid, extraPayments) {
-            // Calculate remaining debt for each partner (proportional payment + their extra payments)
-            const debtA = Math.max(0, INITIAL_DEBTS.A - (totalPaid * (INITIAL_DEBTS.A / TOTAL_DEBT)) - (extraPayments.A || 0));
-            const debtB = Math.max(0, INITIAL_DEBTS.B - (totalPaid * (INITIAL_DEBTS.B / TOTAL_DEBT)) - (extraPayments.B || 0));
-            const debtC = Math.max(0, INITIAL_DEBTS.C - (totalPaid * (INITIAL_DEBTS.C / TOTAL_DEBT)) - (extraPayments.C || 0));
+            // Calculate debt clear rate
+            const debtClearRate = totalPaid / TOTAL_DEBT;
+
+            // Each partner's debt paid from regular payments
+            const regularDebtA = INITIAL_DEBTS.A * debtClearRate;
+            const regularDebtB = INITIAL_DEBTS.B * debtClearRate;
+            const regularDebtC = INITIAL_DEBTS.C * debtClearRate;
+
+            // Remaining = Initial - Regular debt paid - Extra paid
+            const debtA = Math.max(0, INITIAL_DEBTS.A - regularDebtA - (extraPayments.A || 0));
+            const debtB = Math.max(0, INITIAL_DEBTS.B - regularDebtB - (extraPayments.B || 0));
+            const debtC = Math.max(0, INITIAL_DEBTS.C - regularDebtC - (extraPayments.C || 0));
 
             document.getElementById('debtA').textContent = `₹${formatNumber(debtA)}`;
             document.getElementById('debtB').textContent = `₹${formatNumber(debtB)}`;
@@ -750,7 +756,7 @@
             document.getElementById('extraC').textContent = `₹${formatNumber(extraPayments.C || 0)}`;
         }
 
-        async function calculatePreview() {
+        function calculatePreview() {
             const payment = parseFloat(document.getElementById('paymentInput').value) || 0;
 
             if (payment <= 0) {
@@ -759,36 +765,45 @@
                 return;
             }
 
-            const state = await fetch(`${API_URL}/api/state`).then(r => r.json());
-            const totalPaidIncludingExtra = state.totalDebtPaid + (state.totalExtraPayments || 0);
-            const remainingDebt = Math.max(0, TOTAL_DEBT - totalPaidIncludingExtra);
+            // CORRECTED CALCULATION
+            // Step 1: Divide by shareholding
+            const shareA = payment * SHAREHOLDING.A;
+            const shareB = payment * SHAREHOLDING.B;
+            const shareC = payment * SHAREHOLDING.C;
 
-            // 50/50 SPLIT
-            const toPersonX = Math.min(payment * 0.5, remainingDebt);
-            const toSalary = payment * 0.5;
+            // Step 2: Calculate debt clear rate (ensures 50% to Person X)
+            const debtClearRate = (payment * 0.5) / TOTAL_DEBT;
+            const debtClearPct = debtClearRate * 100;
 
-            const debtA = toPersonX * (INITIAL_DEBTS.A / TOTAL_DEBT);
-            const debtB = toPersonX * (INITIAL_DEBTS.B / TOTAL_DEBT);
-            const debtC = toPersonX * (INITIAL_DEBTS.C / TOTAL_DEBT);
+            // Step 3: Calculate debt payments
+            const debtA = INITIAL_DEBTS.A * debtClearRate;
+            const debtB = INITIAL_DEBTS.B * debtClearRate;
+            const debtC = INITIAL_DEBTS.C * debtClearRate;
 
-            const salaryA = toSalary * SALARY_SPLIT.A;
-            const salaryB = toSalary * SALARY_SPLIT.B;
-            const salaryC = toSalary * SALARY_SPLIT.C;
+            // Step 4: Calculate salaries
+            const salaryA = shareA - debtA;
+            const salaryB = shareB - debtB;
+            const salaryC = shareC - debtC;
 
+            const totalDebt = debtA + debtB + debtC;
+            const totalSalary = salaryA + salaryB + salaryC;
+
+            // Update preview
             document.getElementById('previewTotal').textContent = `₹${formatNumber(payment)}`;
-            document.getElementById('previewPersonX').textContent = `₹${formatNumber(toPersonX)}`;
-            document.getElementById('previewSalary').textContent = `₹${formatNumber(toSalary)}`;
+            document.getElementById('previewPersonX').textContent = `₹${formatNumber(totalDebt)}`;
+            document.getElementById('previewSalary').textContent = `₹${formatNumber(totalSalary)}`;
+            document.getElementById('previewClearRate').textContent = `${debtClearPct.toFixed(4)}%`;
 
+            document.getElementById('previewShareA').textContent = formatNumber(shareA);
             document.getElementById('previewDebtA').textContent = formatNumber(debtA);
-            document.getElementById('previewDebtPercA').textContent = ((debtA / toPersonX) * 100).toFixed(2);
             document.getElementById('previewSalaryA').textContent = formatNumber(salaryA);
 
+            document.getElementById('previewShareB').textContent = formatNumber(shareB);
             document.getElementById('previewDebtB').textContent = formatNumber(debtB);
-            document.getElementById('previewDebtPercB').textContent = ((debtB / toPersonX) * 100).toFixed(2);
             document.getElementById('previewSalaryB').textContent = formatNumber(salaryB);
 
+            document.getElementById('previewShareC').textContent = formatNumber(shareC);
             document.getElementById('previewDebtC').textContent = formatNumber(debtC);
-            document.getElementById('previewDebtPercC').textContent = ((debtC / toPersonX) * 100).toFixed(2);
             document.getElementById('previewSalaryC').textContent = formatNumber(salaryC);
 
             document.getElementById('splitPreview').classList.remove('hidden');
@@ -892,7 +907,7 @@
                                 <div class="history-item extra-payment">
                                     <div class="history-amount">💵 Extra: ₹${formatNumber(item.amount)}</div>
                                     <div class="history-split">
-                                        Paid by: ${partnerNames[item.partner]} (Reduces their debt by ₹${formatNumber(item.amount)})
+                                        Paid by: ${partnerNames[item.partner]} (Reduces their debt)
                                     </div>
                                     <div class="history-meta">
                                         ${new Date(item.timestamp).toLocaleString('en-IN', { 
@@ -904,26 +919,26 @@
                                 </div>
                             `;
                         } else {
-                            const details = item.partnerDetails || calculatePartnerDetails(item);
+                            const details = item.partnerDetails;
                             return `
                                 <div class="history-item">
                                     <div class="history-amount">₹${formatNumber(item.amount)}</div>
                                     <div class="history-split">
                                         To Person X: ₹${formatNumber(item.toPersonX)} (50%) | 
-                                        Salary Pool: ₹${formatNumber(item.toSalary)} (50%)
+                                        Salary: ₹${formatNumber(item.toSalary)} (50%)
                                     </div>
                                     <div class="history-partner-details">
                                         <div class="history-partner-row">
                                             <span>👤 Bhargav (30%):</span>
-                                            <span>Debt ₹${formatNumber(details.A.debt)} | Salary ₹${formatNumber(details.A.salary)}</span>
+                                            <span>Share ₹${formatNumber(details.A.share)} → Debt ₹${formatNumber(details.A.debt)} + Salary ₹${formatNumber(details.A.salary)}</span>
                                         </div>
                                         <div class="history-partner-row">
                                             <span>👤 Sagar (30%):</span>
-                                            <span>Debt ₹${formatNumber(details.B.debt)} | Salary ₹${formatNumber(details.B.salary)}</span>
+                                            <span>Share ₹${formatNumber(details.B.share)} → Debt ₹${formatNumber(details.B.debt)} + Salary ₹${formatNumber(details.B.salary)}</span>
                                         </div>
                                         <div class="history-partner-row">
                                             <span>👤 Bharat (40%):</span>
-                                            <span>Debt ₹${formatNumber(details.C.debt)} | Salary ₹${formatNumber(details.C.salary)}</span>
+                                            <span>Share ₹${formatNumber(details.C.share)} → Debt ₹${formatNumber(details.C.debt)} + Salary ₹${formatNumber(details.C.salary)}</span>
                                         </div>
                                     </div>
                                     <div class="history-meta">
@@ -943,22 +958,6 @@
             } catch (error) {
                 showAlert('Failed to load history', 'error');
             }
-        }
-
-        function calculatePartnerDetails(item) {
-            const debtA = item.toPersonX * (INITIAL_DEBTS.A / TOTAL_DEBT);
-            const debtB = item.toPersonX * (INITIAL_DEBTS.B / TOTAL_DEBT);
-            const debtC = item.toPersonX * (INITIAL_DEBTS.C / TOTAL_DEBT);
-
-            const salaryA = item.toSalary * SALARY_SPLIT.A;
-            const salaryB = item.toSalary * SALARY_SPLIT.B;
-            const salaryC = item.toSalary * SALARY_SPLIT.C;
-
-            return {
-                A: { debt: debtA, salary: salaryA },
-                B: { debt: debtB, salary: salaryB },
-                C: { debt: debtC, salary: salaryC }
-            };
         }
 
         async function resetData() {
