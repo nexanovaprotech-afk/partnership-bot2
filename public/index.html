@@ -78,6 +78,11 @@
             color: #667eea;
         }
 
+        .summary-value.remaining {
+            color: #f44336;
+            font-size: 20px;
+        }
+
         .input-card {
             background: white;
             border-radius: 12px;
@@ -374,6 +379,27 @@
             font-weight: 700;
             margin-left: 8px;
         }
+
+        .debt-highlight {
+            background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+
+        .debt-highlight .label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .debt-highlight .value {
+            font-size: 32px;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -394,6 +420,12 @@
             <button class="btn btn-primary" onclick="adminLogin()" style="margin-top: 12px;">
                 Login as Admin
             </button>
+        </div>
+
+        <!-- REMAINING TOTAL DEBT HIGHLIGHT -->
+        <div class="debt-highlight">
+            <div class="label">⚠️ Total Remaining Debt for Person X</div>
+            <div class="value" id="remainingTotalDebt">₹149,950</div>
         </div>
 
         <div class="summary-card">
@@ -427,7 +459,7 @@
             <!-- Extra Payment Section -->
             <div class="input-card" style="margin-top: 20px;">
                 <div class="input-label">
-                    💳 Extra Payment (Optional)
+                    💳 Extra Payment (Reduces Partner's Debt)
                 </div>
                 <select id="extraPaymentPartner">
                     <option value="">Select Partner</option>
@@ -530,11 +562,11 @@
             <div class="partner-header">👤 <span class="partner-name">Bhargav (A)</span></div>
             <div class="partner-row">
                 <span class="partner-label">Initial Debt:</span>
-                <span class="partner-value">₹68,500</span>
+                <span class="partner-value">₹66,250</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Remaining:</span>
-                <span class="partner-value" id="debtA">₹68,500</span>
+                <span class="partner-value" id="debtA">₹66,250</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Extra Paid:</span>
@@ -546,11 +578,11 @@
             <div class="partner-header">👤 <span class="partner-name">Sagar (B)</span></div>
             <div class="partner-row">
                 <span class="partner-label">Initial Debt:</span>
-                <span class="partner-value">₹68,500</span>
+                <span class="partner-value">₹66,250</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Remaining:</span>
-                <span class="partner-value" id="debtB">₹68,500</span>
+                <span class="partner-value" id="debtB">₹66,250</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Extra Paid:</span>
@@ -562,11 +594,11 @@
             <div class="partner-header">👤 <span class="partner-name">Bharat (C)</span></div>
             <div class="partner-row">
                 <span class="partner-label">Initial Debt:</span>
-                <span class="partner-value">₹19,700</span>
+                <span class="partner-value">₹17,450</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Remaining:</span>
-                <span class="partner-value" id="debtC">₹19,700</span>
+                <span class="partner-value" id="debtC">₹17,450</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Extra Paid:</span>
@@ -599,7 +631,7 @@
         tg.expand();
         tg.enableClosingConfirmation();
 
-        const INITIAL_DEBTS = { A: 68500, B: 68500, C: 19700 };
+        const INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
         const SALARY_SPLIT = { A: 0.30, B: 0.30, C: 0.40 };
         const TOTAL_DEBT = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
 
@@ -689,17 +721,23 @@
                 document.getElementById('totalSalaryPaid').textContent = `₹${formatNumber(state.totalSalaryPaid)}`;
                 document.getElementById('totalExtraPayments').textContent = `₹${formatNumber(state.totalExtraPayments || 0)}`;
 
-                updateRemainingDebts(state.totalDebtPaid);
+                // UPDATE REMAINING TOTAL DEBT (includes extra payments)
+                const totalPaidIncludingExtra = state.totalDebtPaid + (state.totalExtraPayments || 0);
+                const remainingTotalDebt = Math.max(0, TOTAL_DEBT - totalPaidIncludingExtra);
+                document.getElementById('remainingTotalDebt').textContent = `₹${formatNumber(remainingTotalDebt)}`;
+
+                updateRemainingDebts(state.totalDebtPaid, state.extraPayments || { A: 0, B: 0, C: 0 });
                 updateExtraPayments(state.extraPayments || { A: 0, B: 0, C: 0 });
             } catch (error) {
                 console.error('Error loading state:', error);
             }
         }
 
-        function updateRemainingDebts(totalPaid) {
-            const debtA = Math.max(0, INITIAL_DEBTS.A - (totalPaid * (INITIAL_DEBTS.A / TOTAL_DEBT)));
-            const debtB = Math.max(0, INITIAL_DEBTS.B - (totalPaid * (INITIAL_DEBTS.B / TOTAL_DEBT)));
-            const debtC = Math.max(0, INITIAL_DEBTS.C - (totalPaid * (INITIAL_DEBTS.C / TOTAL_DEBT)));
+        function updateRemainingDebts(totalPaid, extraPayments) {
+            // Calculate remaining debt for each partner (proportional payment + their extra payments)
+            const debtA = Math.max(0, INITIAL_DEBTS.A - (totalPaid * (INITIAL_DEBTS.A / TOTAL_DEBT)) - (extraPayments.A || 0));
+            const debtB = Math.max(0, INITIAL_DEBTS.B - (totalPaid * (INITIAL_DEBTS.B / TOTAL_DEBT)) - (extraPayments.B || 0));
+            const debtC = Math.max(0, INITIAL_DEBTS.C - (totalPaid * (INITIAL_DEBTS.C / TOTAL_DEBT)) - (extraPayments.C || 0));
 
             document.getElementById('debtA').textContent = `₹${formatNumber(debtA)}`;
             document.getElementById('debtB').textContent = `₹${formatNumber(debtB)}`;
@@ -722,7 +760,8 @@
             }
 
             const state = await fetch(`${API_URL}/api/state`).then(r => r.json());
-            const remainingDebt = Math.max(0, TOTAL_DEBT - state.totalDebtPaid);
+            const totalPaidIncludingExtra = state.totalDebtPaid + (state.totalExtraPayments || 0);
+            const remainingDebt = Math.max(0, TOTAL_DEBT - totalPaidIncludingExtra);
 
             // 50/50 SPLIT
             const toPersonX = Math.min(payment * 0.5, remainingDebt);
@@ -853,7 +892,7 @@
                                 <div class="history-item extra-payment">
                                     <div class="history-amount">💵 Extra: ₹${formatNumber(item.amount)}</div>
                                     <div class="history-split">
-                                        Paid by: ${partnerNames[item.partner]}
+                                        Paid by: ${partnerNames[item.partner]} (Reduces their debt by ₹${formatNumber(item.amount)})
                                     </div>
                                     <div class="history-meta">
                                         ${new Date(item.timestamp).toLocaleString('en-IN', { 
