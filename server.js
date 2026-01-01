@@ -10,16 +10,14 @@ const PRESET_ADMIN_ID = null;
 
 let ADMIN_TELEGRAM_ID = PRESET_ADMIN_ID;
 
-// INITIAL DEBTS
-const INITIAL_DEBTS = {
+// CONFIGURABLE DEBTS (can be updated by admin)
+let INITIAL_DEBTS = {
     A: 66250,  // Bhargav
     B: 66250,  // Sagar
     C: 17450   // Bharat
 };
 
-const TOTAL_DEBT = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
-
-// SHAREHOLDING (for dividing total payment)
+// SHAREHOLDING (for salary distribution)
 const SHAREHOLDING = {
     A: 0.30,  // Bhargav 30%
     B: 0.30,  // Sagar 30%
@@ -32,12 +30,30 @@ let state = {
     totalExtraPayments: 0,
     extraPayments: { A: 0, B: 0, C: 0 },
     payments: [],
-    initialDebts: INITIAL_DEBTS
+    initialDebts: { ...INITIAL_DEBTS }
 };
+
+function getTotalDebt() {
+    return INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
+}
 
 function isAdmin(telegramId) {
     if (!ADMIN_TELEGRAM_ID) return false;
     return telegramId?.toString() === ADMIN_TELEGRAM_ID?.toString();
+}
+
+// Calculate individual debt paid for each partner
+function calculateIndividualDebtPaid() {
+    const totalDebt = getTotalDebt();
+    if (totalDebt === 0) return { A: 0, B: 0, C: 0 };
+
+    const debtClearRate = state.totalDebtPaid / totalDebt;
+
+    return {
+        A: INITIAL_DEBTS.A * debtClearRate,
+        B: INITIAL_DEBTS.B * debtClearRate,
+        C: INITIAL_DEBTS.C * debtClearRate
+    };
 }
 
 // CORRECT CALCULATION:
@@ -48,13 +64,15 @@ function isAdmin(telegramId) {
 // Result: Bharat gets HIGHER salary (40% share, low debt)
 //         Everyone clears debt at SAME % rate
 function calculatePartnerDetails(amount) {
+    const totalDebt = getTotalDebt();
+
     // Step 1: Divide by shareholding
     const shareA = amount * SHAREHOLDING.A;  // 30%
     const shareB = amount * SHAREHOLDING.B;  // 30%
     const shareC = amount * SHAREHOLDING.C;  // 40%
 
     // Step 2: Calculate debt clear rate (ensures 50% to Person X)
-    const debtClearRate = (amount * 0.5) / TOTAL_DEBT;  // as decimal (e.g., 0.066689)
+    const debtClearRate = (amount * 0.5) / totalDebt;  // as decimal
 
     // Step 3: Calculate debt payments (each partner pays their debt × clear rate)
     const debtA = INITIAL_DEBTS.A * debtClearRate;
@@ -75,17 +93,60 @@ function calculatePartnerDetails(amount) {
 }
 
 app.get('/api/state', (req, res) => {
-    res.json(state);
+    const debtPaid = calculateIndividualDebtPaid();
+    res.json({
+        ...state,
+        debtPaid  // Add individual debt paid amounts
+    });
+});
+
+app.get('/api/config', (req, res) => {
+    res.json({
+        initialDebts: INITIAL_DEBTS,
+        shareholding: SHAREHOLDING
+    });
+});
+
+// POST: Update initial debts (admin only)
+app.post('/api/config/debts', (req, res) => {
+    const { debtA, debtB, debtC, telegramId } = req.body;
+
+    if (!isAdmin(telegramId)) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (!debtA || !debtB || !debtC || debtA < 0 || debtB < 0 || debtC < 0) {
+        return res.status(400).json({ error: 'Invalid debt amounts' });
+    }
+
+    INITIAL_DEBTS.A = parseFloat(debtA);
+    INITIAL_DEBTS.B = parseFloat(debtB);
+    INITIAL_DEBTS.C = parseFloat(debtC);
+
+    state.initialDebts = { ...INITIAL_DEBTS };
+
+    console.log('💰 Debts Updated:');
+    console.log('   • Bhargav: ₹' + INITIAL_DEBTS.A.toLocaleString());
+    console.log('   • Sagar: ₹' + INITIAL_DEBTS.B.toLocaleString());
+    console.log('   • Bharat: ₹' + INITIAL_DEBTS.C.toLocaleString());
+
+    res.json({ 
+        success: true, 
+        initialDebts: INITIAL_DEBTS 
+    });
 });
 
 app.get('/api/history', (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
+    const debtPaid = calculateIndividualDebtPaid();
+
     res.json({
         history: state.payments.slice(-limit).reverse(),
         totalDebtPaid: state.totalDebtPaid,
         totalSalaryPaid: state.totalSalaryPaid,
         totalExtraPayments: state.totalExtraPayments,
-        extraPayments: state.extraPayments
+        extraPayments: state.extraPayments,
+        debtPaid  // Add individual debt paid
     });
 });
 
@@ -109,7 +170,10 @@ app.post('/api/payment', (req, res) => {
     state.totalDebtPaid += toPersonX;
     state.totalSalaryPaid += toSalary;
 
+    const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+
     state.payments.push({
+        id: paymentId,
         type: 'regular',
         amount: parseFloat(amount),
         toPersonX,
@@ -155,7 +219,10 @@ app.post('/api/extra-payment', (req, res) => {
     state.extraPayments[partner] += parseFloat(amount);
     state.totalExtraPayments += parseFloat(amount);
 
+    const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+
     state.payments.push({
+        id: paymentId,
         type: 'extra',
         partner,
         amount: parseFloat(amount),
@@ -171,6 +238,49 @@ app.post('/api/extra-payment', (req, res) => {
         success: true, 
         extraPayments: state.extraPayments,
         totalExtraPayments: state.totalExtraPayments
+    });
+});
+
+// DELETE: Remove single payment entry
+app.delete('/api/payment/:id', (req, res) => {
+    const { id } = req.params;
+    const { telegramId } = req.body;
+
+    if (!isAdmin(telegramId)) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const paymentIndex = state.payments.findIndex(p => p.id === id);
+
+    if (paymentIndex === -1) {
+        return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    const payment = state.payments[paymentIndex];
+
+    // Reverse the payment
+    if (payment.type === 'regular') {
+        state.totalDebtPaid -= payment.toPersonX;
+        state.totalSalaryPaid -= payment.toSalary;
+    } else if (payment.type === 'extra') {
+        state.extraPayments[payment.partner] -= payment.amount;
+        state.totalExtraPayments -= payment.amount;
+    }
+
+    // Remove from array
+    state.payments.splice(paymentIndex, 1);
+
+    console.log(`🗑️  Payment deleted: ID ${id}`);
+
+    res.json({ 
+        success: true,
+        message: 'Payment deleted',
+        state: {
+            totalDebtPaid: state.totalDebtPaid,
+            totalSalaryPaid: state.totalSalaryPaid,
+            totalExtraPayments: state.totalExtraPayments,
+            extraPayments: state.extraPayments
+        }
     });
 });
 
@@ -200,22 +310,21 @@ app.post('/api/admin/reset', (req, res) => {
         totalExtraPayments: 0,
         extraPayments: { A: 0, B: 0, C: 0 },
         payments: [], 
-        initialDebts: INITIAL_DEBTS 
+        initialDebts: { ...INITIAL_DEBTS }
     };
     res.json({ success: true });
 });
 
 app.listen(process.env.PORT || 10000, () => {
-    console.log('🚀 Partnership Calculator Server (FINAL CORRECTED)');
-    console.log('💰 Total Debt: ₹' + TOTAL_DEBT.toLocaleString());
-    console.log('   • Bhargav: ₹66,250 (30% shareholding)');
-    console.log('   • Sagar: ₹66,250 (30% shareholding)');
-    console.log('   • Bharat: ₹17,450 (40% shareholding)');
-    console.log('📊 Logic:');
-    console.log('   1. Divide payment by shareholding (30/30/40)');
-    console.log('   2. Calculate debt clear rate (ensures 50% to Person X)');
-    console.log('   3. Each pays: their_debt × clear_rate');
-    console.log('   4. Each keeps: their_share - their_debt_payment');
-    console.log('✅ Bharat gets HIGHER salary (40% share, low debt)');
-    console.log('✅ All partners clear debt at SAME % rate!');
+    const totalDebt = getTotalDebt();
+    console.log('🚀 Partnership Calculator Server (UPDATED)');
+    console.log('💰 Total Debt: ₹' + totalDebt.toLocaleString());
+    console.log('   • Bhargav: ₹' + INITIAL_DEBTS.A.toLocaleString() + ' (30% shareholding)');
+    console.log('   • Sagar: ₹' + INITIAL_DEBTS.B.toLocaleString() + ' (30% shareholding)');
+    console.log('   • Bharat: ₹' + INITIAL_DEBTS.C.toLocaleString() + ' (40% shareholding)');
+    console.log('📊 Features:');
+    console.log('   ✅ Configurable debts');
+    console.log('   ✅ Individual debt paid tracking');
+    console.log('   ✅ Delete single entries');
+    console.log('   ✅ Everyone clears debt at SAME % rate!');
 });
