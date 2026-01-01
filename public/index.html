@@ -101,20 +101,27 @@
             font-size: 15px;
         }
 
-        input[type="number"], input[type="password"], select {
+        input[type="number"], input[type="password"], input[type="text"], select, textarea {
             width: 100%;
             padding: 14px 16px;
-            font-size: 18px;
+            font-size: 16px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             background: #fafafa;
             color: #333;
-            font-weight: 600;
+            font-weight: 500;
             transition: all 0.2s;
             margin-bottom: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-        input:focus, select:focus {
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
             background: white;
@@ -305,6 +312,23 @@
             font-size: 13px;
             color: #666;
             margin-bottom: 4px;
+        }
+
+        .history-comment {
+            background: #fff;
+            border-left: 3px solid #667eea;
+            padding: 10px 12px;
+            margin-top: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #555;
+            font-style: italic;
+        }
+
+        .history-comment-icon {
+            display: inline-block;
+            margin-right: 6px;
+            font-style: normal;
         }
 
         .history-partner-details {
@@ -522,6 +546,12 @@
                     <span class="fifty-badge">50/50 Split</span>
                 </div>
                 <input type="number" id="paymentInput" placeholder="20000" min="0" step="0.01">
+
+                <!-- COMMENT/REMARK FIELD -->
+                <div class="input-label" style="margin-top: 8px;">
+                    💬 Comment/Remark (Optional)
+                </div>
+                <textarea id="paymentComment" placeholder="e.g., Project ABC payment, Monthly salary, etc."></textarea>
             </div>
             <button class="btn btn-primary" onclick="recordPayment()">
                 📝 Record Payment
@@ -539,6 +569,12 @@
                     <option value="C">Bharat</option>
                 </select>
                 <input type="number" id="extraPaymentAmount" placeholder="Amount (₹)" min="0" step="0.01">
+
+                <!-- COMMENT/REMARK FIELD FOR EXTRA PAYMENT -->
+                <div class="input-label" style="margin-top: 8px;">
+                    💬 Comment/Remark (Optional)
+                </div>
+                <textarea id="extraPaymentComment" placeholder="e.g., Personal contribution, Advance payment, etc."></textarea>
             </div>
             <button class="btn btn-success" onclick="recordExtraPayment()">
                 💵 Record Extra Payment
@@ -966,6 +1002,8 @@
             }
 
             const amount = parseFloat(document.getElementById('paymentInput').value);
+            const comment = document.getElementById('paymentComment').value.trim();  // Get comment
+
             if (!amount || amount <= 0) {
                 showAlert('⚠️ Enter valid amount', 'error');
                 return;
@@ -975,12 +1013,13 @@
                 const response = await fetch(`${API_URL}/api/payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount, recordedBy: userName, telegramId })
+                    body: JSON.stringify({ amount, recordedBy: userName, telegramId, comment })  // Send comment
                 });
 
                 if (response.ok) {
                     showAlert('✅ Payment recorded!', 'success');
                     document.getElementById('paymentInput').value = '';
+                    document.getElementById('paymentComment').value = '';  // Clear comment
                     document.getElementById('splitPreview').classList.add('hidden');
                     document.getElementById('partnerPreview').classList.add('hidden');
                     await loadState();
@@ -1000,6 +1039,7 @@
 
             const partner = document.getElementById('extraPaymentPartner').value;
             const amount = parseFloat(document.getElementById('extraPaymentAmount').value);
+            const comment = document.getElementById('extraPaymentComment').value.trim();  // Get comment
 
             if (!partner || !amount || amount <= 0) {
                 showAlert('⚠️ Select partner and enter amount', 'error');
@@ -1010,13 +1050,14 @@
                 const response = await fetch(`${API_URL}/api/extra-payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ partner, amount, recordedBy: userName, telegramId })
+                    body: JSON.stringify({ partner, amount, recordedBy: userName, telegramId, comment })  // Send comment
                 });
 
                 if (response.ok) {
                     showAlert('✅ Extra payment recorded!', 'success');
                     document.getElementById('extraPaymentPartner').value = '';
                     document.getElementById('extraPaymentAmount').value = '';
+                    document.getElementById('extraPaymentComment').value = '';  // Clear comment
                     await loadState();
                 } else {
                     showAlert('❌ Failed to record', 'error');
@@ -1079,6 +1120,13 @@
                     list.innerHTML = data.history.map(item => {
                         const deleteBtn = isAdmin ? `<button class="btn btn-danger btn-small" onclick="deletePayment('${item.id}')">🗑️ Delete</button>` : '';
 
+                        // Format comment if exists
+                        const commentHtml = item.comment ? `
+                            <div class="history-comment">
+                                <span class="history-comment-icon">💬</span>${escapeHtml(item.comment)}
+                            </div>
+                        ` : '';
+
                         if (item.type === 'extra') {
                             const partnerNames = { A: 'Bhargav', B: 'Sagar', C: 'Bharat' };
                             return `
@@ -1090,6 +1138,7 @@
                                     <div class="history-split">
                                         Paid by: ${partnerNames[item.partner]} (Reduces their debt)
                                     </div>
+                                    ${commentHtml}
                                     <div class="history-meta">
                                         ${new Date(item.timestamp).toLocaleString('en-IN', { 
                                             day: '2-digit', month: 'short', year: 'numeric', 
@@ -1111,6 +1160,7 @@
                                         To Person X: ₹${formatNumber(item.toPersonX)} (50%) | 
                                         Salary: ₹${formatNumber(item.toSalary)} (50%)
                                     </div>
+                                    ${commentHtml}
                                     <div class="history-partner-details">
                                         <div class="history-partner-row">
                                             <span>👤 Bhargav (30%):</span>
@@ -1182,6 +1232,12 @@
 
         function formatNumber(num) {
             return num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         init();
