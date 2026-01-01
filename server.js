@@ -407,8 +407,8 @@ app.post('/api/payment', (req, res) => {
         timestamp: new Date().toISOString(),
         telegramId,
         comment: comment || '',
-        paymentStartDate: paymentStartDate || null,  // NEW: Date range
-        paymentEndDate: paymentEndDate || null        // NEW: Date range
+        paymentStartDate: paymentStartDate || null,
+        paymentEndDate: paymentEndDate || null
     });
 
     state.totalDebtPaid += partnerDetails.toPersonX;
@@ -459,7 +459,6 @@ app.put('/api/payment/:id', (req, res) => {
         payment.paymentEndDate = paymentEndDate || null;
         payment.editedAt = new Date().toISOString();
 
-        // Recalculate entire state
         recalculateState();
 
         console.log(`✏️  Payment edited: ID ${id}`);
@@ -484,16 +483,22 @@ app.post('/api/extra-payment', (req, res) => {
         return res.status(403).json({ error: 'Admin access required' });
     }
 
-    if (!partner || !amount || amount <= 0) {
-        return res.status(400).json({ error: 'Invalid input' });
-    }
-
-    if (!['A', 'B', 'C'].includes(partner)) {
+    if (!partner || !['A', 'B', 'C'].includes(partner)) {
         return res.status(400).json({ error: 'Invalid partner' });
     }
 
-    state.extraPayments[partner] += parseFloat(amount);
-    state.totalExtraPayments += parseFloat(amount);
+    if (amount === undefined || amount === null) {
+        return res.status(400).json({ error: 'Amount required' });
+    }
+
+    const amountNum = parseFloat(amount);
+
+    if (isNaN(amountNum)) {
+        return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    state.extraPayments[partner] += amountNum;
+    state.totalExtraPayments += amountNum;
 
     const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
@@ -501,7 +506,7 @@ app.post('/api/extra-payment', (req, res) => {
         id: paymentId,
         type: 'extra',
         partner,
-        amount: parseFloat(amount),
+        amount: amountNum,
         recordedBy: recordedBy || 'Unknown',
         timestamp: new Date().toISOString(),
         telegramId,
@@ -510,7 +515,9 @@ app.post('/api/extra-payment', (req, res) => {
 
     state.debtFullyPaid = getRemainingDebt() <= 0;
 
-    console.log(`💵 Extra Payment: ₹${amount}`);
+    const isNewDebt = amountNum < 0;
+    console.log(`${isNewDebt ? '🆕 New Debt' : '💵 Extra Payment'}: ₹${Math.abs(amountNum)} for ${partner}`);
+    if (comment) console.log(`   💬 Comment: ${comment}`);
 
     res.json({ success: true, extraPayments: state.extraPayments, totalExtraPayments: state.totalExtraPayments });
 });
@@ -575,12 +582,13 @@ app.post('/api/admin/reset', (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-    console.log('🚀 Partnership Calculator Server (FINAL VERSION)');
+    console.log('🚀 Partnership Calculator Server (FIXED VERSION)');
     console.log('✅ Features:');
     console.log('   • Smart debt completion');
     console.log('   • Editable entries');
     console.log('   • Private access with approval');
     console.log('   • Monthly salary tracking');
     console.log('   • Payment date range support');
+    console.log('   • New debt entries (FIXED)');
     console.log('   • Comments support');
 });
