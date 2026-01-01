@@ -150,9 +150,9 @@ app.get('/api/history', (req, res) => {
     });
 });
 
-// POST: Record regular payment
+// POST: Record regular payment (WITH COMMENT/REMARK)
 app.post('/api/payment', (req, res) => {
-    const { amount, recordedBy, telegramId } = req.body;
+    const { amount, recordedBy, telegramId, comment } = req.body;  // Added comment
 
     if (!isAdmin(telegramId)) {
         return res.status(403).json({ error: 'Admin access required' });
@@ -181,10 +181,12 @@ app.post('/api/payment', (req, res) => {
         partnerDetails,
         recordedBy: recordedBy || 'Unknown',
         timestamp: new Date().toISOString(),
-        telegramId
+        telegramId,
+        comment: comment || ''  // Store comment/remark
     });
 
     console.log(`💰 Payment: ₹${amount}`);
+    if (comment) console.log(`   💬 Comment: ${comment}`);
     console.log(`   Debt Clear Rate: ${partnerDetails.debtClearRate.toFixed(4)}%`);
     console.log(`   Bhargav (30%): Share ₹${partnerDetails.A.share.toFixed(2)} → Debt ₹${partnerDetails.A.debt.toFixed(2)} + Salary ₹${partnerDetails.A.salary.toFixed(2)}`);
     console.log(`   Sagar (30%): Share ₹${partnerDetails.B.share.toFixed(2)} → Debt ₹${partnerDetails.B.debt.toFixed(2)} + Salary ₹${partnerDetails.B.salary.toFixed(2)}`);
@@ -200,9 +202,9 @@ app.post('/api/payment', (req, res) => {
     });
 });
 
-// POST: Record extra payment by partner
+// POST: Record extra payment by partner (WITH COMMENT/REMARK)
 app.post('/api/extra-payment', (req, res) => {
-    const { partner, amount, recordedBy, telegramId } = req.body;
+    const { partner, amount, recordedBy, telegramId, comment } = req.body;  // Added comment
 
     if (!isAdmin(telegramId)) {
         return res.status(403).json({ error: 'Admin access required' });
@@ -228,11 +230,13 @@ app.post('/api/extra-payment', (req, res) => {
         amount: parseFloat(amount),
         recordedBy: recordedBy || 'Unknown',
         timestamp: new Date().toISOString(),
-        telegramId
+        telegramId,
+        comment: comment || ''  // Store comment/remark
     });
 
     const partnerNames = { A: 'Bhargav', B: 'Sagar', C: 'Bharat' };
     console.log(`💵 Extra Payment: ₹${amount} by ${partnerNames[partner]}`);
+    if (comment) console.log(`   💬 Comment: ${comment}`);
 
     res.json({ 
         success: true, 
@@ -317,7 +321,7 @@ app.post('/api/admin/reset', (req, res) => {
 
 app.listen(process.env.PORT || 10000, () => {
     const totalDebt = getTotalDebt();
-    console.log('🚀 Partnership Calculator Server (UPDATED)');
+    console.log('🚀 Partnership Calculator Server (WITH COMMENTS)');
     console.log('💰 Total Debt: ₹' + totalDebt.toLocaleString());
     console.log('   • Bhargav: ₹' + INITIAL_DEBTS.A.toLocaleString() + ' (30% shareholding)');
     console.log('   • Sagar: ₹' + INITIAL_DEBTS.B.toLocaleString() + ' (30% shareholding)');
@@ -326,5 +330,6 @@ app.listen(process.env.PORT || 10000, () => {
     console.log('   ✅ Configurable debts');
     console.log('   ✅ Individual debt paid tracking');
     console.log('   ✅ Delete single entries');
+    console.log('   ✅ Comments/Remarks support');
     console.log('   ✅ Everyone clears debt at SAME % rate!');
 });
