@@ -157,6 +157,21 @@
             color: white;
         }
 
+        .btn-danger {
+            background: #f44336;
+            color: white;
+            padding: 8px 12px;
+            font-size: 14px;
+            width: auto;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+            margin: 0;
+        }
+
         .split-card {
             background: white;
             border-radius: 12px;
@@ -234,6 +249,10 @@
             color: #333;
         }
 
+        .partner-value.paid {
+            color: #28a745;
+        }
+
         .percentage {
             color: #667eea;
             font-size: 12px;
@@ -261,6 +280,7 @@
             border-radius: 8px;
             margin-bottom: 12px;
             border-left: 4px solid #667eea;
+            position: relative;
         }
 
         .history-item.extra-payment {
@@ -268,11 +288,17 @@
             background: #f0fff4;
         }
 
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
         .history-amount {
             font-weight: 700;
             font-size: 18px;
             color: #333;
-            margin-bottom: 8px;
         }
 
         .history-split {
@@ -400,6 +426,29 @@
             font-size: 32px;
             font-weight: 700;
         }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .config-input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-input-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .config-input-group input {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
@@ -419,6 +468,28 @@
             <input type="password" id="adminPassword" placeholder="Enter admin password">
             <button class="btn btn-primary" onclick="adminLogin()" style="margin-top: 12px;">
                 Login as Admin
+            </button>
+        </div>
+
+        <!-- CONFIGURE DEBTS (Admin Only) -->
+        <div id="configSection" class="admin-section hidden">
+            <div class="admin-title">⚙️ Configure Initial Debts</div>
+            <div class="config-grid">
+                <div class="config-input-group">
+                    <div class="config-input-label">Bhargav (A)</div>
+                    <input type="number" id="configDebtA" placeholder="66250" min="0">
+                </div>
+                <div class="config-input-group">
+                    <div class="config-input-label">Sagar (B)</div>
+                    <input type="number" id="configDebtB" placeholder="66250" min="0">
+                </div>
+                <div class="config-input-group">
+                    <div class="config-input-label">Bharat (C)</div>
+                    <input type="number" id="configDebtC" placeholder="17450" min="0">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="updateDebts()">
+                💾 Update Debts
             </button>
         </div>
 
@@ -555,20 +626,24 @@
         </div>
 
         <!-- Remaining Debts -->
-        <div class="section-title">💰 Remaining Debts</div>
+        <div class="section-title">💰 Debt Status</div>
         <div class="partner-card">
             <div class="partner-header">👤 <span class="partner-name">Bhargav (A)</span></div>
             <div class="partner-row">
                 <span class="partner-label">Initial Debt:</span>
-                <span class="partner-value">₹66,250</span>
+                <span class="partner-value" id="initialDebtA">₹66,250</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Paid (Regular):</span>
+                <span class="partner-value paid" id="paidDebtA">₹0</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Extra Paid:</span>
+                <span class="partner-value paid" id="extraA">₹0</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Remaining:</span>
                 <span class="partner-value" id="debtA">₹66,250</span>
-            </div>
-            <div class="partner-row">
-                <span class="partner-label">Extra Paid:</span>
-                <span class="partner-value" id="extraA">₹0</span>
             </div>
         </div>
 
@@ -576,15 +651,19 @@
             <div class="partner-header">👤 <span class="partner-name">Sagar (B)</span></div>
             <div class="partner-row">
                 <span class="partner-label">Initial Debt:</span>
-                <span class="partner-value">₹66,250</span>
+                <span class="partner-value" id="initialDebtB">₹66,250</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Paid (Regular):</span>
+                <span class="partner-value paid" id="paidDebtB">₹0</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Extra Paid:</span>
+                <span class="partner-value paid" id="extraB">₹0</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Remaining:</span>
                 <span class="partner-value" id="debtB">₹66,250</span>
-            </div>
-            <div class="partner-row">
-                <span class="partner-label">Extra Paid:</span>
-                <span class="partner-value" id="extraB">₹0</span>
             </div>
         </div>
 
@@ -592,15 +671,19 @@
             <div class="partner-header">👤 <span class="partner-name">Bharat (C)</span></div>
             <div class="partner-row">
                 <span class="partner-label">Initial Debt:</span>
-                <span class="partner-value">₹17,450</span>
+                <span class="partner-value" id="initialDebtC">₹17,450</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Paid (Regular):</span>
+                <span class="partner-value paid" id="paidDebtC">₹0</span>
+            </div>
+            <div class="partner-row">
+                <span class="partner-label">Extra Paid:</span>
+                <span class="partner-value paid" id="extraC">₹0</span>
             </div>
             <div class="partner-row">
                 <span class="partner-label">Remaining:</span>
                 <span class="partner-value" id="debtC">₹17,450</span>
-            </div>
-            <div class="partner-row">
-                <span class="partner-label">Extra Paid:</span>
-                <span class="partner-value" id="extraC">₹0</span>
             </div>
         </div>
 
@@ -617,6 +700,9 @@
 
         <div id="adminControls" class="hidden admin-section">
             <div class="admin-title">⚙️ Admin Controls</div>
+            <button class="btn btn-secondary" onclick="toggleConfigSection()">
+                ⚙️ Configure Debts
+            </button>
             <button class="btn btn-secondary" onclick="resetData()">
                 🔄 Reset All Data
             </button>
@@ -629,9 +715,8 @@
         tg.expand();
         tg.enableClosingConfirmation();
 
-        const INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
+        let INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
         const SHAREHOLDING = { A: 0.30, B: 0.30, C: 0.40 };
-        const TOTAL_DEBT = INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
 
         let isAdmin = false;
         let telegramId = tg.initDataUnsafe?.user?.id || null;
@@ -639,12 +724,77 @@
 
         async function init() {
             await checkAdminStatus();
+            await loadConfig();
             await loadState();
             setupEventListeners();
         }
 
         function setupEventListeners() {
             document.getElementById('paymentInput').addEventListener('input', calculatePreview);
+        }
+
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_URL}/api/config`);
+                const config = await response.json();
+                INITIAL_DEBTS = config.initialDebts;
+
+                // Update config inputs
+                document.getElementById('configDebtA').value = INITIAL_DEBTS.A;
+                document.getElementById('configDebtB').value = INITIAL_DEBTS.B;
+                document.getElementById('configDebtC').value = INITIAL_DEBTS.C;
+
+                // Update initial debt displays
+                document.getElementById('initialDebtA').textContent = `₹${formatNumber(INITIAL_DEBTS.A)}`;
+                document.getElementById('initialDebtB').textContent = `₹${formatNumber(INITIAL_DEBTS.B)}`;
+                document.getElementById('initialDebtC').textContent = `₹${formatNumber(INITIAL_DEBTS.C)}`;
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        async function updateDebts() {
+            if (!isAdmin) {
+                showAlert('⛔ Admin access required', 'error');
+                return;
+            }
+
+            const debtA = parseFloat(document.getElementById('configDebtA').value);
+            const debtB = parseFloat(document.getElementById('configDebtB').value);
+            const debtC = parseFloat(document.getElementById('configDebtC').value);
+
+            if (!debtA || !debtB || !debtC || debtA < 0 || debtB < 0 || debtC < 0) {
+                showAlert('⚠️ Enter valid debt amounts', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/config/debts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ debtA, debtB, debtC, telegramId })
+                });
+
+                if (response.ok) {
+                    showAlert('✅ Debts updated!', 'success');
+                    await loadConfig();
+                    await loadState();
+                    document.getElementById('configSection').classList.add('hidden');
+                } else {
+                    showAlert('❌ Failed to update', 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Network error', 'error');
+            }
+        }
+
+        function toggleConfigSection() {
+            const section = document.getElementById('configSection');
+            section.classList.toggle('hidden');
+        }
+
+        function getTotalDebt() {
+            return INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
         }
 
         async function checkAdminStatus() {
@@ -721,29 +871,26 @@
 
                 // UPDATE REMAINING TOTAL DEBT (includes extra payments)
                 const totalPaidIncludingExtra = state.totalDebtPaid + (state.totalExtraPayments || 0);
-                const remainingTotalDebt = Math.max(0, TOTAL_DEBT - totalPaidIncludingExtra);
+                const remainingTotalDebt = Math.max(0, getTotalDebt() - totalPaidIncludingExtra);
                 document.getElementById('remainingTotalDebt').textContent = `₹${formatNumber(remainingTotalDebt)}`;
 
-                updateRemainingDebts(state.totalDebtPaid, state.extraPayments || { A: 0, B: 0, C: 0 });
+                updateRemainingDebts(state.debtPaid || { A: 0, B: 0, C: 0 }, state.extraPayments || { A: 0, B: 0, C: 0 });
                 updateExtraPayments(state.extraPayments || { A: 0, B: 0, C: 0 });
             } catch (error) {
                 console.error('Error loading state:', error);
             }
         }
 
-        function updateRemainingDebts(totalPaid, extraPayments) {
-            // Calculate debt clear rate
-            const debtClearRate = totalPaid / TOTAL_DEBT;
+        function updateRemainingDebts(debtPaid, extraPayments) {
+            // Show paid amounts
+            document.getElementById('paidDebtA').textContent = `₹${formatNumber(debtPaid.A)}`;
+            document.getElementById('paidDebtB').textContent = `₹${formatNumber(debtPaid.B)}`;
+            document.getElementById('paidDebtC').textContent = `₹${formatNumber(debtPaid.C)}`;
 
-            // Each partner's debt paid from regular payments
-            const regularDebtA = INITIAL_DEBTS.A * debtClearRate;
-            const regularDebtB = INITIAL_DEBTS.B * debtClearRate;
-            const regularDebtC = INITIAL_DEBTS.C * debtClearRate;
-
-            // Remaining = Initial - Regular debt paid - Extra paid
-            const debtA = Math.max(0, INITIAL_DEBTS.A - regularDebtA - (extraPayments.A || 0));
-            const debtB = Math.max(0, INITIAL_DEBTS.B - regularDebtB - (extraPayments.B || 0));
-            const debtC = Math.max(0, INITIAL_DEBTS.C - regularDebtC - (extraPayments.C || 0));
+            // Calculate remaining
+            const debtA = Math.max(0, INITIAL_DEBTS.A - debtPaid.A - (extraPayments.A || 0));
+            const debtB = Math.max(0, INITIAL_DEBTS.B - debtPaid.B - (extraPayments.B || 0));
+            const debtC = Math.max(0, INITIAL_DEBTS.C - debtPaid.C - (extraPayments.C || 0));
 
             document.getElementById('debtA').textContent = `₹${formatNumber(debtA)}`;
             document.getElementById('debtB').textContent = `₹${formatNumber(debtB)}`;
@@ -765,6 +912,8 @@
                 return;
             }
 
+            const totalDebt = getTotalDebt();
+
             // CORRECTED CALCULATION
             // Step 1: Divide by shareholding
             const shareA = payment * SHAREHOLDING.A;
@@ -772,7 +921,7 @@
             const shareC = payment * SHAREHOLDING.C;
 
             // Step 2: Calculate debt clear rate (ensures 50% to Person X)
-            const debtClearRate = (payment * 0.5) / TOTAL_DEBT;
+            const debtClearRate = (payment * 0.5) / totalDebt;
             const debtClearPct = debtClearRate * 100;
 
             // Step 3: Calculate debt payments
@@ -785,12 +934,12 @@
             const salaryB = shareB - debtB;
             const salaryC = shareC - debtC;
 
-            const totalDebt = debtA + debtB + debtC;
+            const totalDebtPayment = debtA + debtB + debtC;
             const totalSalary = salaryA + salaryB + salaryC;
 
             // Update preview
             document.getElementById('previewTotal').textContent = `₹${formatNumber(payment)}`;
-            document.getElementById('previewPersonX').textContent = `₹${formatNumber(totalDebt)}`;
+            document.getElementById('previewPersonX').textContent = `₹${formatNumber(totalDebtPayment)}`;
             document.getElementById('previewSalary').textContent = `₹${formatNumber(totalSalary)}`;
             document.getElementById('previewClearRate').textContent = `${debtClearPct.toFixed(4)}%`;
 
@@ -877,6 +1026,33 @@
             }
         }
 
+        async function deletePayment(paymentId) {
+            if (!isAdmin) {
+                showAlert('⛔ Admin access required', 'error');
+                return;
+            }
+
+            if (!confirm('⚠️ Delete this payment entry?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/payment/${paymentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegramId })
+                });
+
+                if (response.ok) {
+                    showAlert('✅ Payment deleted!', 'success');
+                    await loadState();
+                    await loadHistory();
+                } else {
+                    showAlert('❌ Failed to delete', 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Network error', 'error');
+            }
+        }
+
         let historyVisible = false;
         async function toggleHistory() {
             historyVisible = !historyVisible;
@@ -901,11 +1077,16 @@
                 const list = document.getElementById('historyList');
                 if (data.history && data.history.length > 0) {
                     list.innerHTML = data.history.map(item => {
+                        const deleteBtn = isAdmin ? `<button class="btn btn-danger btn-small" onclick="deletePayment('${item.id}')">🗑️ Delete</button>` : '';
+
                         if (item.type === 'extra') {
                             const partnerNames = { A: 'Bhargav', B: 'Sagar', C: 'Bharat' };
                             return `
                                 <div class="history-item extra-payment">
-                                    <div class="history-amount">💵 Extra: ₹${formatNumber(item.amount)}</div>
+                                    <div class="history-item-header">
+                                        <div class="history-amount">💵 Extra: ₹${formatNumber(item.amount)}</div>
+                                        ${deleteBtn}
+                                    </div>
                                     <div class="history-split">
                                         Paid by: ${partnerNames[item.partner]} (Reduces their debt)
                                     </div>
@@ -922,7 +1103,10 @@
                             const details = item.partnerDetails;
                             return `
                                 <div class="history-item">
-                                    <div class="history-amount">₹${formatNumber(item.amount)}</div>
+                                    <div class="history-item-header">
+                                        <div class="history-amount">₹${formatNumber(item.amount)}</div>
+                                        ${deleteBtn}
+                                    </div>
                                     <div class="history-split">
                                         To Person X: ₹${formatNumber(item.toPersonX)} (50%) | 
                                         Salary: ₹${formatNumber(item.toSalary)} (50%)
