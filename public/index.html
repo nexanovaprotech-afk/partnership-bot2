@@ -1972,111 +1972,34 @@ if (!document.querySelector('style[data-notification-animations]')) {
 }
 
 // ========== DATA EXPORT FUNCTION ==========
-async function handleExportData() {
-    if (!isAdmin) {
-        showNotification('❌ Admin access required', 'error');
-        return;
-    }
-
+function handleExportData() {
     try {
-        console.log('Export button clicked - preparing backup...');
-        showNotification('📦 Creating backup...', 'info');
-
-        // Fetch all data from server
-        const [stateRes, historyRes, configRes] = await Promise.all([
-            fetch(`${API_URL}/api/state?telegramId=${telegramId}`),
-            fetch(`${API_URL}/api/history?telegramId=${telegramId}&limit=1000`),
-            fetch(`${API_URL}/api/config`)
-        ]);
-
-        if (!stateRes.ok || !historyRes.ok || !configRes.ok) {
-            throw new Error('Failed to fetch data from server');
-        }
-
-        const state = await stateRes.json();
-        const history = await historyRes.json();
-        const config = await configRes.json();
-
+        console.log('Export button clicked');
         const exportData = {
-            version: "1.0",
+            entries: entries,
+            partnerships: partnerships,
             exportDate: new Date().toISOString(),
-            exportedBy: userName,
-            telegramId: telegramId,
-            initialDebts: config.initialDebts || INITIAL_DEBTS,
-            shareholding: SHAREHOLDING,
-            state: state,
-            history: history.history || [],
-            timestamp: Date.now()
+            version: "1.0"
         };
 
-        console.log('Backup data prepared:', exportData.history.length, 'records');
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `partnership-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
 
-        // Send to server to create downloadable file
-        const response = await fetch(`${API_URL}/api/create-backup`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                telegramId: telegramId,
-                backupData: exportData
-            })
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            if (result.downloadUrl) {
-                // Open download URL in new window
-                window.open(result.downloadUrl, '_blank');
-                showNotification('✅ Opening download link...', 'success');
-            } else {
-                // Fallback: use blob download
-                const filename = `partnership-backup-${new Date().toISOString().split('T')[0]}.json`;
-                const dataStr = JSON.stringify(exportData, null, 2);
-
-                // Try multiple download methods
-                if (navigator.share && navigator.canShare) {
-                    // Method 1: Web Share API (works on mobile)
-                    const file = new File([dataStr], filename, {type: 'application/json'});
-
-                    if (navigator.canShare({files: [file]})) {
-                        await navigator.share({
-                            files: [file],
-                            title: 'Partnership Backup',
-                            text: 'Backup data file'
-                        });
-                        showNotification('✅ Backup shared!', 'success');
-                        return;
-                    }
-                }
-
-                // Method 2: Direct download (desktop)
-                const blob = new Blob([dataStr], {type: 'application/octet-stream'});
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-
-                setTimeout(() => {
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                }, 100);
-
-                showNotification('✅ Backup downloaded! Check Downloads folder.', 'success');
-            }
-
-            console.log('Export completed successfully');
-        } else {
-            throw new Error('Server failed to create backup');
-        }
-
+        showNotification('✅ Data exported successfully!', 'success');
+        console.log('Export completed');
     } catch (error) {
         console.error('Export error:', error);
         showNotification('❌ Export failed: ' + error.message, 'error');
     }
 }
-
 
 // ========== DATA IMPORT FUNCTION ==========
 function handleImportData() {
@@ -2100,63 +2023,69 @@ function handleFileSelected(event) {
     console.log('File selected:', file.name);
     const reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
             const importedData = JSON.parse(e.target.result);
 
-            if (!importedData.entries || !importedData.partnerships) {
-                throw new Error('Invalid backup file format');
+            // Validate backup file format
+            if (!importedData.version || !importedData.history) {
+                throw new Error('Invalid backup file format. Missing version or history data.');
             }
 
-            const dateStr = importedData.exportDate ? new Date(importedData.exportDate).toLocaleString() : 'unknown date';
-            const confirmMsg = `Import backup from ${dateStr}?\n\nEntries: ${importedData.entries.length}\nPartners: ${Object.keys(importedData.partnerships).length}\n\nThis will replace current data!`;
+            // Show confirmation dialog
+            const dateStr = importedData.exportDate ? new Date(importedData.exportDate).toLocaleDateString('en-IN') : 'Unknown';
+            const recordCount = importedData.history ? importedData.history.length : 0;
+            const exportedBy = importedData.exportedBy || 'Unknown';
+
+            const confirmMsg = `Import Backup File?\n\n` +
+                `Export Date: ${dateStr}\n` +
+                `Records: ${recordCount}\n` +
+                `Exported By: ${exportedBy}\n\n` +
+                `This will replace ALL current data!\n` +
+                `Continue?`;
 
             if (confirm(confirmMsg)) {
                 console.log('User confirmed import');
 
                 // Send to server
-                fetch('/api/import-data', {
+                const response = await fetch(`${API_URL}/api/import-backup`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(importedData)
-                })
-                .then(response => response.json())
-                .then(result => {
-                    console.log('Import result:', result);
-                    if (result.success) {
-                        entries = importedData.entries;
-                        partnerships = importedData.partnerships;
-                        updateEntriesTable();
-                        updatePartnerSelect();
-                        showNotification('✅ Data imported successfully!', 'success');
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        showNotification('❌ Import failed: ' + result.message, 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Import API error:', error);
-                    showNotification('❌ Import failed: ' + error.message, 'error');
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        telegramId: telegramId,
+                        backupData: importedData
+                    })
                 });
+
+                const result = await response.json();
+                console.log('Import result:', result);
+
+                if (result.success) {
+                    showNotification('✅ Data imported successfully!', 'success');
+                    console.log('Import successful, reloading page...');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showNotification('❌ Import failed: ' + (result.message || 'Unknown error'), 'error');
+                }
             } else {
                 console.log('User cancelled import');
             }
         } catch (error) {
-            console.error('File parse error:', error);
+            console.error('File read error:', error);
             showNotification('❌ Invalid backup file: ' + error.message, 'error');
         }
     };
 
-    reader.onerror = function() {
-        console.error('File read error');
+    reader.onerror = function(error) {
+        console.error('FileReader error:', error);
         showNotification('❌ Failed to read file', 'error');
     };
 
     reader.readAsText(file);
-    event.target.value = ''; // Reset file input
 }
+
 
 // ========== PARTNERSHIP CONFIGURATION ==========
 let tempPartnerships = {};
