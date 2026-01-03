@@ -14,17 +14,11 @@ let ADMIN_TELEGRAM_ID = PRESET_ADMIN_ID;
 let approvedUsers = new Set();
 let pendingApprovals = [];
 
-// CONFIGURABLE DEBTS
-let INITIAL_DEBTS = {
-    A: 66250,
-    B: 66250,
-    C: 17450
-};
-
-const SHAREHOLDING = {
-    A: 0.30,
-    B: 0.30,
-    C: 0.40
+// DYNAMIC PARTNERS CONFIGURATION
+let PARTNERS = {
+    A: { name: 'Bhargav', debt: 66250, share: 0.30 },
+    B: { name: 'Sagar', debt: 66250, share: 0.30 },
+    C: { name: 'Bharat', debt: 17450, share: 0.40 }
 };
 
 let state = {
@@ -33,12 +27,15 @@ let state = {
     totalExtraPayments: 0,
     extraPayments: { A: 0, B: 0, C: 0 },
     payments: [],
-    initialDebts: { ...INITIAL_DEBTS },
     debtFullyPaid: false
 };
 
 function getTotalDebt() {
-    return INITIAL_DEBTS.A + INITIAL_DEBTS.B + INITIAL_DEBTS.C;
+    return Object.values(PARTNERS).reduce((sum, p) => sum + p.debt, 0);
+}
+
+function getTotalShare() {
+    return Object.values(PARTNERS).reduce((sum, p) => sum + p.share, 0);
 }
 
 function isAdmin(telegramId) {
@@ -59,69 +56,78 @@ function getRemainingDebt() {
 
 function calculateIndividualDebtPaid() {
     const totalDebt = getTotalDebt();
-    if (totalDebt === 0) return { A: 0, B: 0, C: 0 };
+    if (totalDebt === 0) {
+        const result = {};
+        Object.keys(PARTNERS).forEach(key => result[key] = 0);
+        return result;
+    }
 
     const debtClearRate = state.totalDebtPaid / totalDebt;
+    const result = {};
 
-    return {
-        A: INITIAL_DEBTS.A * debtClearRate,
-        B: INITIAL_DEBTS.B * debtClearRate,
-        C: INITIAL_DEBTS.C * debtClearRate
-    };
+    Object.keys(PARTNERS).forEach(key => {
+        result[key] = PARTNERS[key].debt * debtClearRate;
+    });
+
+    return result;
 }
 
 function calculatePartnerDetails(amount) {
     const totalDebt = getTotalDebt();
     const remainingDebt = getRemainingDebt();
 
-    const shareA = amount * SHAREHOLDING.A;
-    const shareB = amount * SHAREHOLDING.B;
-    const shareC = amount * SHAREHOLDING.C;
+    const partnerShares = {};
+    const partnerDebts = {};
+    const partnerSalaries = {};
 
-    let debtA, debtB, debtC, salaryA, salaryB, salaryC;
+    Object.keys(PARTNERS).forEach(key => {
+        partnerShares[key] = amount * PARTNERS[key].share;
+    });
+
     let toPersonX, toSalary;
     let debtClearRate;
 
     if (remainingDebt <= 0) {
-        debtA = debtB = debtC = 0;
-        salaryA = shareA;
-        salaryB = shareB;
-        salaryC = shareC;
+        Object.keys(PARTNERS).forEach(key => {
+            partnerDebts[key] = 0;
+            partnerSalaries[key] = partnerShares[key];
+        });
         toPersonX = 0;
         toSalary = amount;
         debtClearRate = 0;
     } else if (remainingDebt < amount * 0.5) {
         debtClearRate = remainingDebt / totalDebt;
 
-        debtA = INITIAL_DEBTS.A * debtClearRate;
-        debtB = INITIAL_DEBTS.B * debtClearRate;
-        debtC = INITIAL_DEBTS.C * debtClearRate;
+        Object.keys(PARTNERS).forEach(key => {
+            partnerDebts[key] = PARTNERS[key].debt * debtClearRate;
+            partnerSalaries[key] = partnerShares[key] - partnerDebts[key];
+        });
 
         toPersonX = remainingDebt;
         toSalary = amount - remainingDebt;
-
-        salaryA = shareA - debtA;
-        salaryB = shareB - debtB;
-        salaryC = shareC - debtC;
     } else {
         debtClearRate = (amount * 0.5) / totalDebt;
 
-        debtA = INITIAL_DEBTS.A * debtClearRate;
-        debtB = INITIAL_DEBTS.B * debtClearRate;
-        debtC = INITIAL_DEBTS.C * debtClearRate;
+        Object.keys(PARTNERS).forEach(key => {
+            partnerDebts[key] = PARTNERS[key].debt * debtClearRate;
+            partnerSalaries[key] = partnerShares[key] - partnerDebts[key];
+        });
 
-        salaryA = shareA - debtA;
-        salaryB = shareB - debtB;
-        salaryC = shareC - debtC;
-
-        toPersonX = debtA + debtB + debtC;
-        toSalary = salaryA + salaryB + salaryC;
+        toPersonX = Object.values(partnerDebts).reduce((sum, d) => sum + d, 0);
+        toSalary = Object.values(partnerSalaries).reduce((sum, s) => sum + s, 0);
     }
 
+    const details = {};
+    Object.keys(PARTNERS).forEach(key => {
+        details[key] = {
+            share: partnerShares[key],
+            debt: partnerDebts[key],
+            salary: partnerSalaries[key]
+        };
+    });
+
     return {
-        A: { share: shareA, debt: debtA, salary: salaryA },
-        B: { share: shareB, debt: debtB, salary: salaryB },
-        C: { share: shareC, debt: debtC, salary: salaryC },
+        partners: details,
         debtClearRate: debtClearRate * 100,
         toPersonX,
         toSalary,
@@ -133,20 +139,27 @@ function recalculateState() {
     state.totalDebtPaid = 0;
     state.totalSalaryPaid = 0;
     state.totalExtraPayments = 0;
-    state.extraPayments = { A: 0, B: 0, C: 0 };
+
+    // Reset extra payments for all partners
+    state.extraPayments = {};
+    Object.keys(PARTNERS).forEach(key => {
+        state.extraPayments[key] = 0;
+    });
 
     for (let payment of state.payments) {
         if (payment.type === 'regular') {
             const details = calculatePartnerDetails(payment.amount);
             payment.toPersonX = details.toPersonX;
             payment.toSalary = details.toSalary;
-            payment.partnerDetails = details;
+            payment.partnerDetails = details.partners;
 
             state.totalDebtPaid += details.toPersonX;
             state.totalSalaryPaid += details.toSalary;
         } else if (payment.type === 'extra') {
-            state.extraPayments[payment.partner] += payment.amount;
-            state.totalExtraPayments += payment.amount;
+            if (state.extraPayments[payment.partner] !== undefined) {
+                state.extraPayments[payment.partner] += payment.amount;
+                state.totalExtraPayments += payment.amount;
+            }
         }
     }
 
@@ -169,15 +182,21 @@ function getMonthlyBreakdown(month, year) {
     });
 
     let totalAmount = 0;
-    let salaryA = 0, salaryB = 0, salaryC = 0;
     let debtPaid = 0;
+
+    const salaries = {};
+    Object.keys(PARTNERS).forEach(key => {
+        salaries[key] = 0;
+    });
 
     for (let payment of monthlyPayments) {
         if (payment.type === 'regular') {
             totalAmount += payment.amount;
-            salaryA += payment.partnerDetails.A.salary;
-            salaryB += payment.partnerDetails.B.salary;
-            salaryC += payment.partnerDetails.C.salary;
+            Object.keys(PARTNERS).forEach(key => {
+                if (payment.partnerDetails && payment.partnerDetails[key]) {
+                    salaries[key] += payment.partnerDetails[key].salary;
+                }
+            });
             debtPaid += payment.toPersonX;
         }
     }
@@ -189,11 +208,12 @@ function getMonthlyBreakdown(month, year) {
         totalAmount,
         debtPaid,
         totalSalary: totalAmount - debtPaid,
-        salaries: { A: salaryA, B: salaryB, C: salaryC },
+        salaries,
         payments: monthlyPayments
     };
 }
 
+// ACCESS CONTROL ENDPOINTS
 app.post('/api/access/request', (req, res) => {
     const { telegramId, userName } = req.body;
 
@@ -216,10 +236,7 @@ app.post('/api/access/request', (req, res) => {
         requestedAt: new Date().toISOString()
     });
 
-    console.log('🔔 NEW ACCESS REQUEST:');
-    console.log('   User: ' + userName);
-    console.log('   Telegram ID: ' + telegramId);
-
+    console.log('🔔 NEW ACCESS REQUEST: ' + userName);
     res.json({ pending: true, message: 'Access request sent to admin' });
 });
 
@@ -244,7 +261,6 @@ app.post('/api/access/approve', (req, res) => {
     pendingApprovals = pendingApprovals.filter(p => p.telegramId !== userId);
 
     console.log('✅ User approved: ' + userId);
-
     res.json({ success: true });
 });
 
@@ -256,12 +272,11 @@ app.post('/api/access/reject', (req, res) => {
     }
 
     pendingApprovals = pendingApprovals.filter(p => p.telegramId !== userId);
-
     console.log('❌ User rejected: ' + userId);
-
     res.json({ success: true });
 });
 
+// STATE & CONFIG ENDPOINTS
 app.get('/api/state', (req, res) => {
     const { telegramId } = req.query;
 
@@ -276,40 +291,51 @@ app.get('/api/state', (req, res) => {
         ...state,
         debtPaid,
         remainingDebt,
+        partners: PARTNERS,
         debtFullyPaid: state.debtFullyPaid
     });
 });
 
 app.get('/api/config', (req, res) => {
     res.json({
-        initialDebts: INITIAL_DEBTS,
-        shareholding: SHAREHOLDING
+        partners: PARTNERS
     });
 });
 
-app.post('/api/config/debts', (req, res) => {
-    const { debtA, debtB, debtC, telegramId } = req.body;
+// UPDATE PARTNERS CONFIGURATION
+app.post('/api/config/partners', (req, res) => {
+    const { partners, telegramId } = req.body;
 
     if (!isAdmin(telegramId)) {
         return res.status(403).json({ error: 'Admin access required' });
     }
 
-    if (!debtA || !debtB || !debtC || debtA < 0 || debtB < 0 || debtC < 0) {
-        return res.status(400).json({ error: 'Invalid debt amounts' });
+    if (!partners || typeof partners !== 'object') {
+        return res.status(400).json({ error: 'Invalid partners configuration' });
     }
 
-    INITIAL_DEBTS.A = parseFloat(debtA);
-    INITIAL_DEBTS.B = parseFloat(debtB);
-    INITIAL_DEBTS.C = parseFloat(debtC);
+    // Validate total share = 1.0 (100%)
+    const totalShare = Object.values(partners).reduce((sum, p) => sum + p.share, 0);
+    if (Math.abs(totalShare - 1.0) > 0.01) {
+        return res.status(400).json({ error: 'Total share must equal 100%' });
+    }
 
-    state.initialDebts = { ...INITIAL_DEBTS };
+    PARTNERS = partners;
+
+    // Update extra payments for new/removed partners
+    const newExtraPayments = {};
+    Object.keys(PARTNERS).forEach(key => {
+        newExtraPayments[key] = state.extraPayments[key] || 0;
+    });
+    state.extraPayments = newExtraPayments;
+
     recalculateState();
 
-    console.log('💰 Debts Updated & Recalculated');
-
-    res.json({ success: true, initialDebts: INITIAL_DEBTS });
+    console.log('⚙️ Partners Configuration Updated');
+    res.json({ success: true, partners: PARTNERS });
 });
 
+// PAYMENT ENDPOINTS
 app.get('/api/history', (req, res) => {
     const { telegramId, limit } = req.query;
 
@@ -327,7 +353,8 @@ app.get('/api/history', (req, res) => {
         totalExtraPayments: state.totalExtraPayments,
         extraPayments: state.extraPayments,
         debtPaid,
-        debtFullyPaid: state.debtFullyPaid
+        debtFullyPaid: state.debtFullyPaid,
+        partners: PARTNERS
     });
 });
 
@@ -370,7 +397,6 @@ app.post('/api/payment', (req, res) => {
     }
 
     const partnerDetails = calculatePartnerDetails(amount);
-
     const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
     state.payments.push({
@@ -379,7 +405,7 @@ app.post('/api/payment', (req, res) => {
         amount: parseFloat(amount),
         toPersonX: partnerDetails.toPersonX,
         toSalary: partnerDetails.toSalary,
-        partnerDetails,
+        partnerDetails: partnerDetails.partners,
         recordedBy: recordedBy || 'Unknown',
         timestamp: new Date().toISOString(),
         telegramId,
@@ -393,15 +419,9 @@ app.post('/api/payment', (req, res) => {
     state.debtFullyPaid = getRemainingDebt() <= 0;
 
     console.log(`💰 Payment: ₹${amount}`);
-    if (paymentStartDate && paymentEndDate) {
-        console.log(`   📅 Period: ${paymentStartDate} to ${paymentEndDate}`);
-    }
     if (comment) console.log(`   💬 Comment: ${comment}`);
-    if (partnerDetails.isDebtComplete) {
-        console.log('   🎉 DEBT FULLY PAID!');
-    }
 
-    res.json({ success: true, state: { totalDebtPaid: state.totalDebtPaid, totalSalaryPaid: state.totalSalaryPaid, debtFullyPaid: state.debtFullyPaid } });
+    res.json({ success: true });
 });
 
 app.put('/api/payment/:id', (req, res) => {
@@ -418,15 +438,6 @@ app.put('/api/payment/:id', (req, res) => {
         return res.status(404).json({ error: 'Payment not found' });
     }
 
-    if (paymentStartDate && paymentEndDate) {
-        const startDate = new Date(paymentStartDate);
-        const endDate = new Date(paymentEndDate);
-
-        if (startDate > endDate) {
-            return res.status(400).json({ error: 'Start date must be before end date' });
-        }
-    }
-
     if (payment.type === 'regular') {
         payment.amount = parseFloat(amount);
         payment.comment = comment || '';
@@ -435,19 +446,15 @@ app.put('/api/payment/:id', (req, res) => {
         payment.editedAt = new Date().toISOString();
 
         recalculateState();
-
-        console.log(`✏️  Payment edited: ID ${id}`);
-
-        res.json({ success: true, state: { totalDebtPaid: state.totalDebtPaid, totalSalaryPaid: state.totalSalaryPaid } });
+        console.log(`✏️ Payment edited: ID ${id}`);
     } else {
         payment.amount = parseFloat(amount);
         payment.comment = comment || '';
         payment.editedAt = new Date().toISOString();
-
         recalculateState();
-
-        res.json({ success: true });
     }
+
+    res.json({ success: true });
 });
 
 app.post('/api/extra-payment', (req, res) => {
@@ -457,7 +464,7 @@ app.post('/api/extra-payment', (req, res) => {
         return res.status(403).json({ error: 'Admin access required' });
     }
 
-    if (!partner || !['A', 'B', 'C'].includes(partner)) {
+    if (!partner || !PARTNERS[partner]) {
         return res.status(400).json({ error: 'Invalid partner' });
     }
 
@@ -490,10 +497,9 @@ app.post('/api/extra-payment', (req, res) => {
     state.debtFullyPaid = getRemainingDebt() <= 0;
 
     const isNewDebt = amountNum < 0;
-    console.log(`${isNewDebt ? '🆕 New Debt' : '💵 Extra Payment'}: ₹${Math.abs(amountNum)} for ${partner}`);
-    if (comment) console.log(`   💬 Comment: ${comment}`);
+    console.log(`${isNewDebt ? '🆕 New Debt' : '💵 Extra Payment'}: ₹${Math.abs(amountNum)} for ${PARTNERS[partner].name}`);
 
-    res.json({ success: true, extraPayments: state.extraPayments, totalExtraPayments: state.totalExtraPayments });
+    res.json({ success: true });
 });
 
 app.delete('/api/payment/:id', (req, res) => {
@@ -513,11 +519,81 @@ app.delete('/api/payment/:id', (req, res) => {
     state.payments.splice(paymentIndex, 1);
     recalculateState();
 
-    console.log(`🗑️  Payment deleted: ID ${id}`);
-
-    res.json({ success: true, state: { totalDebtPaid: state.totalDebtPaid, totalSalaryPaid: state.totalSalaryPaid } });
+    console.log(`🗑️ Payment deleted: ID ${id}`);
+    res.json({ success: true });
 });
 
+// EXPORT DATA
+app.get('/api/export', (req, res) => {
+    const { telegramId } = req.query;
+
+    if (!isAdmin(telegramId)) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const exportData = {
+        version: '2.0',
+        exportDate: new Date().toISOString(),
+        partners: PARTNERS,
+        state: state,
+        approvedUsers: Array.from(approvedUsers),
+        adminTelegramId: ADMIN_TELEGRAM_ID
+    };
+
+    console.log('📤 Data exported by admin');
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="partnership-backup-${Date.now()}.json"`);
+    res.json(exportData);
+});
+
+// IMPORT DATA
+app.post('/api/import', (req, res) => {
+    const { telegramId, data } = req.body;
+
+    if (!isAdmin(telegramId)) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (!data || !data.version) {
+        return res.status(400).json({ error: 'Invalid import data' });
+    }
+
+    try {
+        // Import partners configuration
+        if (data.partners) {
+            PARTNERS = data.partners;
+        }
+
+        // Import state
+        if (data.state) {
+            state = data.state;
+        }
+
+        // Import approved users (optional)
+        if (data.approvedUsers) {
+            approvedUsers = new Set(data.approvedUsers);
+        }
+
+        console.log('📥 Data imported successfully');
+        console.log(`   Partners: ${Object.keys(PARTNERS).length}`);
+        console.log(`   Payments: ${state.payments.length}`);
+
+        res.json({ 
+            success: true, 
+            imported: { 
+                partners: Object.keys(PARTNERS).length,
+                payments: state.payments.length,
+                users: approvedUsers.size
+            } 
+        });
+    } catch (error) {
+        console.error('Import error:', error);
+        res.status(500).json({ error: 'Import failed: ' + error.message });
+    }
+});
+
+// ADMIN ENDPOINTS
 app.post('/api/admin/login', (req, res) => {
     const { password, telegramId } = req.body;
     if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Invalid password' });
@@ -542,19 +618,28 @@ app.post('/api/admin/reset', (req, res) => {
     if (password !== ADMIN_PASSWORD || !isAdmin(telegramId)) {
         return res.status(403).json({ error: 'Unauthorized' });
     }
+
     state = { 
         totalDebtPaid: 0, 
         totalSalaryPaid: 0, 
         totalExtraPayments: 0,
-        extraPayments: { A: 0, B: 0, C: 0 },
-        payments: [], 
-        initialDebts: { ...INITIAL_DEBTS },
+        extraPayments: {},
+        payments: [],
         debtFullyPaid: false
     };
+
+    Object.keys(PARTNERS).forEach(key => {
+        state.extraPayments[key] = 0;
+    });
+
     res.json({ success: true });
 });
 
 app.listen(process.env.PORT || 10000, () => {
-    console.log('🚀 Partnership Calculator Server');
-    console.log('✅ All features working!');
+    console.log('🚀 Partnership Calculator Server v2.0');
+    console.log('✅ Features:');
+    console.log('   • Export/Import backup');
+    console.log('   • Dynamic partners');
+    console.log('   • Configurable shares');
+    console.log('   • All existing features');
 });
