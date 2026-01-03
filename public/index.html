@@ -1983,9 +1983,9 @@ async function handleExportData() {
 
         // Fetch all data from server APIs
         const [stateRes, historyRes, configRes] = await Promise.all([
-            fetch(`${APIURL}/api/state?telegramId=${telegramId}`),
-            fetch(`${APIURL}/api/history?telegramId=${telegramId}&limit=1000`),
-            fetch(`${APIURL}/api/config`)
+            fetch(`${API_URL}/api/state?telegramId=${telegramId}`),
+            fetch(`${API_URL}/api/history?telegramId=${telegramId}&limit=1000`),
+            fetch(`${API_URL}/api/config`)
         ]);
 
         const state = await stateRes.json();
@@ -2024,6 +2024,7 @@ async function handleExportData() {
 }
 
 
+// ========== DATA IMPORT FUNCTION ==========
 function handleImportData() {
     console.log('Import button clicked');
     const fileInput = document.getElementById('importFileInput');
@@ -2045,11 +2046,11 @@ function handleFileSelected(event) {
     console.log('File selected:', file.name);
     const reader = new FileReader();
 
-    reader.onload = async function(e) {
+    reader.onload = function(e) {
         try {
             const importedData = JSON.parse(e.target.result);
 
-            if (!importedData.version || !importedData.history) {
+            if (!importedData.entries || !importedData.partnerships) {
                 throw new Error('Invalid backup file format');
             }
 
@@ -2106,27 +2107,16 @@ function handleFileSelected(event) {
 // ========== PARTNERSHIP CONFIGURATION ==========
 let tempPartnerships = {};
 
-async function handleOpenPartnershipConfig() {
-    if (!isAdmin) {
-        showNotification('❌ Admin access required', 'error');
-        return;
-    }
-
+function handleOpenPartnershipConfig() {
     console.log('Opening partnership config');
     try {
-        // Initialize with default shareholding
-        tempPartnerships = {
-            'Bhargav (A)': SHAREHOLDING.A * 100,
-            'Sagar (B)': SHAREHOLDING.B * 100,
-            'Bharat (C)': SHAREHOLDING.C * 100
-        };
-
+        tempPartnerships = JSON.parse(JSON.stringify(partnerships));
         renderPartnershipConfigList();
         const modal = document.getElementById('partnershipConfigModal');
         if (modal) {
             modal.style.display = 'block';
             scrollToElement('partnershipConfigModal');
-            showNotification('📝 Edit partners and shares', 'info');
+            showNotification('📝 Edit partners and shares below', 'success');
         } else {
             console.error('Partnership modal not found');
             showNotification('❌ Modal not found', 'error');
@@ -2275,7 +2265,7 @@ function handleDeletePartner(name) {
     }
 }
 
-async function handleSavePartnershipConfig() {
+function handleSavePartnershipConfig() {
     console.log('Saving partnership configuration');
     const totalPercentage = Object.values(tempPartnerships).reduce((sum, val) => sum + parseFloat(val), 0);
 
