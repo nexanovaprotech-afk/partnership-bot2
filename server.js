@@ -551,7 +551,10 @@ app.get('/api/export', (req, res) => {
 app.post('/api/import', (req, res) => {
     const { telegramId, data } = req.body;
 
+    console.log('📥 Import request received from:', telegramId);
+
     if (!isAdmin(telegramId)) {
+        console.log('❌ Import denied: Not admin');
         return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -569,23 +572,33 @@ app.post('/api/import', (req, res) => {
 
         // Validate structure
         if (!importData || typeof importData !== 'object') {
+            console.log('❌ Import failed: Invalid data type');
             return res.status(400).json({ error: 'Invalid backup file format' });
         }
 
         // Check required fields
         if (!importData.partners || !importData.state) {
-            return res.status(400).json({ error: 'Invalid backup file format' });
+            console.log('❌ Import failed: Missing partners or state');
+            console.log('   Received keys:', Object.keys(importData));
+            return res.status(400).json({ error: 'Invalid backup file format - missing required fields' });
         }
 
-        console.log('📥 Starting import...');
-        console.log(`   Partners: ${Object.keys(importData.partners).length}`);
-        console.log(`   Payments: ${importData.state.payments ? importData.state.payments.length : 0}`);
+        console.log('✅ Import validation passed');
+        console.log('   Partners to import:', Object.keys(importData.partners).length);
+        console.log('   Partner names:', Object.keys(importData.partners).map(k => importData.partners[k].name).join(', '));
+        console.log('   Payments to import:', importData.state.payments ? importData.state.payments.length : 0);
+
+        // Store old data for logging
+        const oldPaymentCount = state.payments ? state.payments.length : 0;
+        const oldDebtPaid = state.totalDebtPaid || 0;
 
         // Import partners configuration
         PARTNERS = importData.partners;
+        console.log('   ✓ Partners imported');
 
         // Import state (all payment data)
         state = importData.state;
+        console.log('   ✓ State imported');
 
         // Ensure extraPayments exists for all partners
         if (!state.extraPayments) {
@@ -596,6 +609,7 @@ app.post('/api/import', (req, res) => {
                 state.extraPayments[key] = 0;
             }
         });
+        console.log('   ✓ Extra payments initialized');
 
         // Ensure payments array exists
         if (!state.payments) {
@@ -605,12 +619,14 @@ app.post('/api/import', (req, res) => {
         // Import approved users (optional)
         if (importData.approvedUsers && Array.isArray(importData.approvedUsers)) {
             approvedUsers = new Set(importData.approvedUsers);
-            console.log(`   Approved users: ${approvedUsers.size}`);
+            console.log('   ✓ Approved users imported:', approvedUsers.size);
         }
 
-        console.log('✅ Data imported successfully');
-        console.log(`   Total payments in state: ${state.payments.length}`);
-        console.log(`   Total debt paid: ${state.totalDebtPaid || 0}`);
+        console.log('✅ DATA IMPORT COMPLETE');
+        console.log('   Payments: ' + oldPaymentCount + ' → ' + state.payments.length);
+        console.log('   Total debt paid: ₹' + oldDebtPaid.toFixed(2) + ' → ₹' + (state.totalDebtPaid || 0).toFixed(2));
+        console.log('   Total salary paid: ₹' + (state.totalSalaryPaid || 0).toFixed(2));
+        console.log('   Remaining debt: ₹' + (state.remainingDebt || 0).toFixed(2));
 
         res.json({ 
             success: true, 
@@ -620,11 +636,13 @@ app.post('/api/import', (req, res) => {
                 payments: state.payments.length,
                 users: approvedUsers.size,
                 totalDebtPaid: state.totalDebtPaid || 0,
-                totalSalaryPaid: state.totalSalaryPaid || 0
+                totalSalaryPaid: state.totalSalaryPaid || 0,
+                remainingDebt: state.remainingDebt || 0
             } 
         });
     } catch (error) {
         console.error('❌ Import error:', error);
+        console.error('   Stack:', error.stack);
         res.status(500).json({ error: 'Import failed: ' + error.message });
     }
 });
