@@ -1034,18 +1034,16 @@
                     👥 View Pending Approvals
                 </button>
                 
-                    <!-- Data Backup & Restore -->
-                    <button onclick="exportData()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <button type="button" onclick="handleExportData()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px;">
                         <span style="font-size: 20px;">📥</span> Export Data Backup
                     </button>
 
-                    <button onclick="document.getElementById('importFile').click()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <button type="button" onclick="handleImportData()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px;">
                         <span style="font-size: 20px;">📤</span> Import Data Backup
                     </button>
-                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleFileSelected(event)">
 
-                    <!-- Partnership Configuration -->
-                    <button onclick="openPartnershipConfig()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <button type="button" onclick="handleOpenPartnershipConfig()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px;">
                         <span style="font-size: 20px;">⚙️</span> Configure Partners & Shares
                     </button>
 
@@ -1917,202 +1915,406 @@
 
         init();
     
-// ===== DATA BACKUP & RESTORE =====
-function exportData() {
-    const data = {entries: entries, partnerships: partnerships, exportDate: new Date().toISOString(), version: "1.0"};
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `partnership-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showNotification('✅ Data exported!', 'success');
-}
 
-function importData(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        try {
-            const data = JSON.parse(ev.target.result);
-            if (!data.entries || !data.partnerships) throw new Error('Invalid format');
-            if (confirm(`Import backup from ${data.exportDate ? new Date(data.exportDate).toLocaleString() : 'unknown'}?\n\nThis replaces current data!`)) {
-                fetch('/api/import-data', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                }).then(r => r.json()).then(result => {
-                    if (result.success) {
-                        showNotification('✅ Data imported!', 'success');
-                        setTimeout(() => location.reload(), 1000);
-                    }
-                });
-            }
-        } catch(err) {
-            showNotification('❌ Invalid file: ' + err.message, 'error');
+// ========== AUTO SCROLL UTILITY ==========
+function scrollToElement(elementId) {
+    setTimeout(() => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+    }, 100);
 }
 
-// ===== PARTNERSHIP CONFIG =====
-let tempPartnerships = {};
-
-function openPartnershipConfig() {
-    tempPartnerships = JSON.parse(JSON.stringify(partnerships));
-    renderPartnershipConfig();
-    document.getElementById('partnershipModal').style.display = 'block';
+// ========== NOTIFICATION SYSTEM ==========
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 25px;
+        border-radius: 12px;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 10002;
+        animation: slideInTop 0.3s ease;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        max-width: 90%;
+        text-align: center;
+        background: ${type === 'success' ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' : 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)'};
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.animation = 'slideOutTop 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
-function closePartnershipConfig() {
-    document.getElementById('partnershipModal').style.display = 'none';
-    document.getElementById('newPartnerName').value = '';
-    document.getElementById('newPartnerShare').value = '';
+// Add notification animations
+if (!document.querySelector('style[data-notification-animations]')) {
+    const style = document.createElement('style');
+    style.setAttribute('data-notification-animations', 'true');
+    style.textContent = `
+        @keyframes slideInTop {
+            from { transform: translate(-50%, -100px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        @keyframes slideOutTop {
+            from { transform: translate(-50%, 0); opacity: 1; }
+            to { transform: translate(-50%, -100px); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
 }
 
-function renderPartnershipConfig() {
-    const container = document.getElementById('partnersListConfig');
-    const names = Object.keys(tempPartnerships);
-    if (names.length === 0) {
-        container.innerHTML = '<p style="color: white; text-align: center; padding: 15px; margin: 0;">No partners yet. Add below.</p>';
+// ========== DATA EXPORT FUNCTION ==========
+function handleExportData() {
+    try {
+        console.log('Export button clicked');
+        const exportData = {
+            entries: entries,
+            partnerships: partnerships,
+            exportDate: new Date().toISOString(),
+            version: "1.0"
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `partnership-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        showNotification('✅ Data exported successfully!', 'success');
+        console.log('Export completed');
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification('❌ Export failed: ' + error.message, 'error');
+    }
+}
+
+// ========== DATA IMPORT FUNCTION ==========
+function handleImportData() {
+    console.log('Import button clicked');
+    const fileInput = document.getElementById('importFileInput');
+    if (fileInput) {
+        fileInput.click();
+    } else {
+        console.error('File input not found');
+        showNotification('❌ Import button error', 'error');
+    }
+}
+
+function handleFileSelected(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        console.log('No file selected');
         return;
     }
-    let html = '';
-    names.forEach(name => {
+
+    console.log('File selected:', file.name);
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+
+            if (!importedData.entries || !importedData.partnerships) {
+                throw new Error('Invalid backup file format');
+            }
+
+            const dateStr = importedData.exportDate ? new Date(importedData.exportDate).toLocaleString() : 'unknown date';
+            const confirmMsg = `Import backup from ${dateStr}?\n\nEntries: ${importedData.entries.length}\nPartners: ${Object.keys(importedData.partnerships).length}\n\nThis will replace current data!`;
+
+            if (confirm(confirmMsg)) {
+                console.log('User confirmed import');
+
+                // Send to server
+                fetch('/api/import-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(importedData)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Import result:', result);
+                    if (result.success) {
+                        entries = importedData.entries;
+                        partnerships = importedData.partnerships;
+                        updateEntriesTable();
+                        updatePartnerSelect();
+                        showNotification('✅ Data imported successfully!', 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showNotification('❌ Import failed: ' + result.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Import API error:', error);
+                    showNotification('❌ Import failed: ' + error.message, 'error');
+                });
+            } else {
+                console.log('User cancelled import');
+            }
+        } catch (error) {
+            console.error('File parse error:', error);
+            showNotification('❌ Invalid backup file: ' + error.message, 'error');
+        }
+    };
+
+    reader.onerror = function() {
+        console.error('File read error');
+        showNotification('❌ Failed to read file', 'error');
+    };
+
+    reader.readAsText(file);
+    event.target.value = ''; // Reset file input
+}
+
+// ========== PARTNERSHIP CONFIGURATION ==========
+let tempPartnerships = {};
+
+function handleOpenPartnershipConfig() {
+    console.log('Opening partnership config');
+    try {
+        tempPartnerships = JSON.parse(JSON.stringify(partnerships));
+        renderPartnershipConfigList();
+        const modal = document.getElementById('partnershipConfigModal');
+        if (modal) {
+            modal.style.display = 'block';
+            scrollToElement('partnershipConfigModal');
+            showNotification('📝 Edit partners and shares below', 'success');
+        } else {
+            console.error('Partnership modal not found');
+            showNotification('❌ Modal not found', 'error');
+        }
+    } catch (error) {
+        console.error('Error opening partnership config:', error);
+        showNotification('❌ Failed to open: ' + error.message, 'error');
+    }
+}
+
+function handleClosePartnershipConfig() {
+    console.log('Closing partnership config');
+    const modal = document.getElementById('partnershipConfigModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    document.getElementById('newPartnerNameInput').value = '';
+    document.getElementById('newPartnerShareInput').value = '';
+}
+
+function renderPartnershipConfigList() {
+    const container = document.getElementById('partnersListConfigContainer');
+    if (!container) {
+        console.error('Partners list container not found');
+        return;
+    }
+
+    const partnerNames = Object.keys(tempPartnerships);
+
+    if (partnerNames.length === 0) {
+        container.innerHTML = '<p style="color: white; text-align: center; padding: 20px; margin: 0;">No partners configured yet.<br>Add your first partner below.</p>';
+        return;
+    }
+
+    let htmlContent = '';
+    partnerNames.forEach((name, index) => {
         const share = tempPartnerships[name];
-        html += `
-            <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                <input type="text" value="${name}" onchange="renamePartner('${name}', this.value)" style="flex: 2; padding: 8px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold;">
-                <input type="number" value="${share}" onchange="updatePartnerShare('${name}', this.value)" step="0.01" style="flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 14px;">
-                <span style="color: white; font-weight: bold;">%</span>
-                <button onclick="deletePartner('${name}')" style="background: #ff6b6b; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">🗑️</button>
+        const escapedName = name.replace(/'/g, "\\'");
+        htmlContent += `
+            <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <input type="text" id="partnerName_${index}" value="${name}" style="flex: 2; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; box-sizing: border-box;">
+                    <input type="number" id="partnerShare_${index}" value="${share}" step="0.01" min="0" max="100" style="flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                    <span style="color: white; font-weight: bold; font-size: 14px;">%</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="handleUpdatePartner('${escapedName}', ${index})" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; font-size: 13px;">
+                        ✅ Update
+                    </button>
+                    <button type="button" onclick="handleDeletePartner('${escapedName}')" style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">
+                        🗑️ Delete
+                    </button>
+                </div>
             </div>
         `;
     });
-    const total = Object.values(tempPartnerships).reduce((sum, val) => sum + parseFloat(val), 0);
-    html += `<div style="background: ${total === 100 ? 'rgba(56,239,125,0.3)' : 'rgba(255,107,107,0.3)'}; padding: 12px; border-radius: 10px; text-align: center; margin-top: 10px;">
-        <span style="color: white; font-weight: bold; font-size: 16px;">Total: ${total.toFixed(2)}% ${total === 100 ? '✅' : '⚠️'}</span>
-    </div>`;
-    container.innerHTML = html;
+
+    // Add total percentage indicator
+    const totalPercentage = Object.values(tempPartnerships).reduce((sum, val) => sum + parseFloat(val), 0);
+    const isValid = Math.abs(totalPercentage - 100) < 0.01;
+    htmlContent += `
+        <div style="background: ${isValid ? 'rgba(56,239,125,0.3)' : 'rgba(255,107,107,0.3)'}; padding: 15px; border-radius: 10px; text-align: center; margin-top: 10px;">
+            <span style="color: white; font-weight: bold; font-size: 18px;">
+                Total: ${totalPercentage.toFixed(2)}% ${isValid ? '✅' : '⚠️ Should be 100%'}
+            </span>
+        </div>
+    `;
+
+    container.innerHTML = htmlContent;
 }
 
-function addNewPartner() {
-    const name = document.getElementById('newPartnerName').value.trim();
-    const share = parseFloat(document.getElementById('newPartnerShare').value);
-    if (!name) return showNotification('❌ Enter partner name', 'error');
-    if (isNaN(share) || share <= 0) return showNotification('❌ Enter valid share', 'error');
-    if (tempPartnerships[name]) return showNotification('❌ Partner exists', 'error');
-    tempPartnerships[name] = share;
-    document.getElementById('newPartnerName').value = '';
-    document.getElementById('newPartnerShare').value = '';
-    renderPartnershipConfig();
-    showNotification('✅ Partner added', 'success');
-}
+function handleAddNewPartner() {
+    console.log('Adding new partner');
+    const nameInput = document.getElementById('newPartnerNameInput');
+    const shareInput = document.getElementById('newPartnerShareInput');
 
-function renamePartner(oldName, newName) {
-    newName = newName.trim();
-    if (!newName || newName === oldName) return;
-    if (tempPartnerships[newName]) {
-        showNotification('❌ Name exists', 'error');
-        renderPartnershipConfig();
+    const name = nameInput.value.trim();
+    const share = parseFloat(shareInput.value);
+
+    if (!name) {
+        showNotification('❌ Please enter partner name', 'error');
         return;
     }
-    tempPartnerships[newName] = tempPartnerships[oldName];
-    delete tempPartnerships[oldName];
-    renderPartnershipConfig();
-}
 
-function updatePartnerShare(name, newShare) {
-    const share = parseFloat(newShare);
-    if (isNaN(share) || share <= 0) {
-        showNotification('❌ Invalid share', 'error');
-        renderPartnershipConfig();
+    if (isNaN(share) || share <= 0 || share > 100) {
+        showNotification('❌ Please enter valid share (0-100)', 'error');
         return;
     }
+
+    if (tempPartnerships[name]) {
+        showNotification('❌ Partner already exists', 'error');
+        return;
+    }
+
     tempPartnerships[name] = share;
-    renderPartnershipConfig();
+    nameInput.value = '';
+    shareInput.value = '';
+    renderPartnershipConfigList();
+    showNotification('✅ Partner added: ' + name, 'success');
+    console.log('Partner added:', name, share);
 }
 
-function deletePartner(name) {
-    if (confirm(`Delete "${name}"?`)) {
+function handleUpdatePartner(oldName, index) {
+    console.log('Updating partner:', oldName);
+    const newName = document.getElementById('partnerName_' + index).value.trim();
+    const newShare = parseFloat(document.getElementById('partnerShare_' + index).value);
+
+    if (!newName) {
+        showNotification('❌ Partner name cannot be empty', 'error');
+        renderPartnershipConfigList();
+        return;
+    }
+
+    if (isNaN(newShare) || newShare <= 0 || newShare > 100) {
+        showNotification('❌ Invalid share percentage', 'error');
+        renderPartnershipConfigList();
+        return;
+    }
+
+    // Check if name changed and new name already exists
+    if (newName !== oldName && tempPartnerships[newName]) {
+        showNotification('❌ Partner name already exists', 'error');
+        renderPartnershipConfigList();
+        return;
+    }
+
+    // Delete old entry if name changed
+    if (newName !== oldName) {
+        delete tempPartnerships[oldName];
+    }
+
+    // Add/update with new values
+    tempPartnerships[newName] = newShare;
+    renderPartnershipConfigList();
+    showNotification('✅ Partner updated', 'success');
+    console.log('Partner updated:', newName, newShare);
+}
+
+function handleDeletePartner(name) {
+    console.log('Deleting partner:', name);
+    if (confirm(`Delete partner "${name}"?`)) {
         delete tempPartnerships[name];
-        renderPartnershipConfig();
-        showNotification('✅ Deleted', 'success');
+        renderPartnershipConfigList();
+        showNotification('✅ Partner deleted', 'success');
+        console.log('Partner deleted:', name);
     }
 }
 
-function savePartnershipConfig() {
-    const total = Object.values(tempPartnerships).reduce((sum, val) => sum + parseFloat(val), 0);
-    if (Math.abs(total - 100) > 0.01) {
-        if (!confirm(`Total is ${total.toFixed(2)}%, not 100%. Continue?`)) return;
+function handleSavePartnershipConfig() {
+    console.log('Saving partnership configuration');
+    const totalPercentage = Object.values(tempPartnerships).reduce((sum, val) => sum + parseFloat(val), 0);
+
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+        const confirmMsg = `Total percentage is ${totalPercentage.toFixed(2)}%, not 100%.\n\nContinue anyway?`;
+        if (!confirm(confirmMsg)) {
+            return;
+        }
     }
+
+    // Send to server
     fetch('/api/update-partnerships', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({partnerships: tempPartnerships})
-    }).then(r => r.json()).then(result => {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerships: tempPartnerships })
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('Save result:', result);
         if (result.success) {
-            partnerships = tempPartnerships;
+            partnerships = JSON.parse(JSON.stringify(tempPartnerships));
             updatePartnerSelect();
-            closePartnershipConfig();
-            showNotification('✅ Saved!', 'success');
+            handleClosePartnershipConfig();
+            showNotification('✅ Partnership configuration saved!', 'success');
+
+            // Recalculate all entries with new shares
             entries.forEach(entry => {
-                const pName = entry.partner || entry.type;
-                if (partnerships[pName]) {
-                    entry.share = partnerships[pName];
+                const partnerName = entry.partner || entry.type;
+                if (partnerships[partnerName]) {
+                    entry.share = partnerships[partnerName];
                     entry.partnerAmount = (entry.actualAmount * entry.share) / 100;
                 }
             });
             updateEntriesTable();
+            console.log('Partnerships updated successfully');
+        } else {
+            showNotification('❌ Save failed: ' + result.message, 'error');
         }
-    }).catch(err => showNotification('❌ Save failed', 'error'));
+    })
+    .catch(error => {
+        console.error('Save API error:', error);
+        showNotification('❌ Failed to save: ' + error.message, 'error');
+    });
 }
 
-function showNotification(msg, type) {
-    const div = document.createElement('div');
-    div.textContent = msg;
-    div.style.cssText = `position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 10px; color: white; font-weight: bold; z-index: 10001; animation: slideIn 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.3); background: ${type === 'success' ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' : 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)'};`;
-    document.body.appendChild(div);
-    setTimeout(() => {
-        div.style.animation = 'slideOut 0.3s';
-        setTimeout(() => div.remove(), 300);
-    }, 3000);
-}
+console.log('✅ All backup and partnership functions loaded');
 
-if (!document.querySelector('style[data-notif]')) {
-    const s = document.createElement('style');
-    s.setAttribute('data-notif', '1');
-    s.textContent = '@keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } } @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }';
-    document.head.appendChild(s);
-}
 </script>
 
     <!-- Partnership Configuration Modal -->
-    <div id="partnershipModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; overflow-y: auto; padding: 20px; box-sizing: border-box;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 20px auto; padding: 25px; border-radius: 20px; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-            <h2 style="color: white; text-align: center; margin: 0 0 20px 0; font-size: 22px;">👥 Partnership Configuration</h2>
+    <div id="partnershipConfigModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; overflow-y: auto; padding: 15px; box-sizing: border-box;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 10px auto; padding: 20px; border-radius: 20px; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+            <h2 style="color: white; text-align: center; margin: 0 0 20px 0; font-size: 20px;">👥 Partnership Configuration</h2>
 
-            <div id="partnersListConfig" style="margin-bottom: 20px;">
+            <div id="partnersListConfigContainer" style="margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
                 <!-- Partners will be listed here -->
             </div>
 
             <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 15px; margin-bottom: 15px;">
                 <h3 style="color: white; margin: 0 0 12px 0; font-size: 16px;">➕ Add New Partner</h3>
-                <input type="text" id="newPartnerName" placeholder="Partner Name" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 8px; font-size: 15px; box-sizing: border-box;">
-                <input type="number" id="newPartnerShare" placeholder="Share %" step="0.01" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 8px; font-size: 15px; box-sizing: border-box;">
-                <button onclick="addNewPartner()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px;">
+                <input type="text" id="newPartnerNameInput" placeholder="Partner Name" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 8px; font-size: 15px; box-sizing: border-box;">
+                <input type="number" id="newPartnerShareInput" placeholder="Share Percentage" step="0.01" min="0" max="100" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 8px; font-size: 15px; box-sizing: border-box;">
+                <button type="button" onclick="handleAddNewPartner()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px;">
                     ✅ Add Partner
                 </button>
             </div>
 
             <div style="display: flex; gap: 8px;">
-                <button onclick="savePartnershipConfig()" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-weight: bold; flex: 1; font-size: 15px;">
+                <button type="button" onclick="handleSavePartnershipConfig()" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-weight: bold; flex: 1; font-size: 15px;">
                     💾 Save
                 </button>
-                <button onclick="closePartnershipConfig()" style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-weight: bold; flex: 1; font-size: 15px;">
+                <button type="button" onclick="handleClosePartnershipConfig()" style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-weight: bold; flex: 1; font-size: 15px;">
                     ❌ Cancel
                 </button>
             </div>
