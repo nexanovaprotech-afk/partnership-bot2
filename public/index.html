@@ -2091,97 +2091,76 @@ function handleImportData() {
 }
 
 function handleFileSelected(event) {
-        const file = event.target.files[0];
-        if (!file) {
-            console.log('No file selected');
-            return;
-        }
+    const file = event.target.files[0];
+    if (!file) {
+        console.log('No file selected');
+        return;
+    }
 
-        console.log('File selected:', file.name);
-        const reader = new FileReader();
+    console.log('File selected:', file.name);
+    const reader = new FileReader();
 
-        reader.onload = async function(e) {
-            try {
-                const importedData = JSON.parse(e.target.result);
-                console.log('Parsed backup data:', importedData);
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
 
-                // Support both formats:
-                // 1. New format: state.partners (your current export)
-                // 2. Old format: partners at root
-                let partnersData, stateData;
-
-                if (importedData.state && importedData.state.partners) {
-                    // New format: partners inside state
-                    partnersData = importedData.state.partners;
-                    stateData = importedData.state;
-                } else if (importedData.partners && importedData.state) {
-                    // Old format: partners at root
-                    partnersData = importedData.partners;
-                    stateData = importedData.state;
-                } else {
-                    throw new Error('Invalid backup file format');
-                }
-
-                const dateStr = importedData.exportDate ? new Date(importedData.exportDate).toLocaleString() : 'unknown date';
-                const payments = stateData.payments ? stateData.payments.length : 0;
-                const partners = Object.keys(partnersData).length;
-
-                const confirmMsg = `Import backup from ${dateStr}?\n\nPayments: ${payments}\nPartners: ${partners}\n\nThis will replace current data!`;
-
-                if (confirm(confirmMsg)) {
-                    console.log('User confirmed import');
-                    showAlert('📥 Importing data...', 'info');
-
-                    try {
-                        const response = await fetch(`${API_URL}/api/import`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                telegramId: telegramId,
-                                data: {
-                                    partners: partnersData,
-                                    state: stateData,
-                                    approvedUsers: importedData.approvedUsers || []
-                                }
-                            })
-                        });
-
-                        const result = await response.json();
-                        console.log('Import result:', result);
-
-                        if (result.success) {
-                            showAlert('✅ Import successful! Reloading...', 'success');
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1000);
-                        } else {
-                            showAlert('❌ Import failed: ' + (result.error || result.message), 'error');
-                        }
-                    } catch (error) {
-                        console.error('Import API error:', error);
-                        showAlert('❌ Import failed: ' + error.message, 'error');
-                    }
-                } else {
-                    console.log('User cancelled import');
-                }
-            } catch (error) {
-                console.error('File parse error:', error);
-                showAlert('❌ Invalid backup file: ' + error.message, 'error');
+            if (!importedData.entries || !importedData.partnerships) {
+                throw new Error('Invalid backup file format');
             }
-        };
 
-        reader.onerror = function() {
-            console.error('File read error');
-            showAlert('❌ Failed to read file', 'error');
-        };
+            const dateStr = importedData.exportDate ? new Date(importedData.exportDate).toLocaleString() : 'unknown date';
+            const confirmMsg = `Import backup from ${dateStr}?\n\nEntries: ${importedData.entries.length}\nPartners: ${Object.keys(importedData.partnerships).length}\n\nThis will replace current data!`;
 
-        reader.readAsText(file);
-        event.target.value = '';;
+            if (confirm(confirmMsg)) {
+                console.log('User confirmed import');
+
+                // Send to server
+                fetch('/api/import-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(importedData)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Import result:', result);
+                    if (result.success) {
+                        entries = importedData.entries;
+                        partnerships = importedData.partnerships;
+                        updateEntriesTable();
+                        updatePartnerSelect();
+                        showNotification('✅ Data imported successfully!', 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showNotification('❌ Import failed: ' + result.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Import API error:', error);
+                    showNotification('❌ Import failed: ' + error.message, 'error');
+                });
+            } else {
+                console.log('User cancelled import');
+            }
+        } catch (error) {
+            console.error('File parse error:', error);
+            showNotification('❌ Invalid backup file: ' + error.message, 'error');
+        }
+    };
+
+    reader.onerror = function() {
+        console.error('File read error');
+        showNotification('❌ Failed to read file', 'error');
+    };
+
+    reader.readAsText(file);
     event.target.value = ''; // Reset file input
 }
 
 // ========== PARTNERSHIP CONFIGURATION ==========
-let tempPartnerships = {};
+let partnerships = {};
+    let tempPartnerships = {};
 
 function handleOpenPartnershipConfig() {
     console.log('Opening partnership config');
