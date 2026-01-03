@@ -1954,7 +1954,7 @@ function importData(event) {
                         updateEntriesTable();
                         updatePartnerSelect();
                         showNotification('✅ Data imported successfully!', 'success');
-                        location.reload(); // Refresh to show all data
+                        setTimeout(() => location.reload(), 1000);
                     }
                 })
                 .catch(error => {
@@ -1967,7 +1967,7 @@ function importData(event) {
         }
     };
     reader.readAsText(file);
-    event.target.value = ''; // Reset file input
+    event.target.value = '';
 }
 
 // ==================== PARTNERSHIP CONFIGURATION ====================
@@ -1975,7 +1975,7 @@ function importData(event) {
 let tempPartnerships = {};
 
 function openPartnershipConfig() {
-    tempPartnerships = JSON.parse(JSON.stringify(partnerships)); // Deep copy
+    tempPartnerships = JSON.parse(JSON.stringify(partnerships));
     renderPartnershipConfig();
     document.getElementById('partnershipModal').style.display = 'block';
 }
@@ -2010,7 +2010,6 @@ function renderPartnershipConfig() {
         `;
     });
 
-    // Show total percentage
     const totalPercentage = Object.values(tempPartnerships).reduce((sum, val) => sum + parseFloat(val), 0);
     html += `
         <div style="background: ${totalPercentage === 100 ? 'rgba(56,239,125,0.3)' : 'rgba(255,107,107,0.3)'}; padding: 15px; border-radius: 12px; margin-top: 15px; text-align: center;">
@@ -2092,7 +2091,6 @@ function savePartnershipConfig() {
         }
     }
 
-    // Save to server
     fetch('/api/update-partnerships', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -2106,7 +2104,6 @@ function savePartnershipConfig() {
             closePartnershipConfig();
             showNotification('✅ Partnership configuration saved!', 'success');
 
-            // Recalculate all entries
             entries.forEach(entry => {
                 const partnerName = entry.partner || entry.type;
                 if (partnerships[partnerName]) {
@@ -2136,6 +2133,7 @@ function showNotification(message, type) {
         font-weight: bold;
         z-index: 10001;
         animation: slideIn 0.3s ease;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         background: ${type === 'success' ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' : 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)'};
     `;
 
@@ -2147,19 +2145,21 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Add CSS animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(400px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(400px); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
+if (!document.querySelector('style[data-notification-style]')) {
+    const style = document.createElement('style');
+    style.setAttribute('data-notification-style', 'true');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
 </script>
 
     <!-- Partnership Configuration Modal -->
@@ -2173,8 +2173,8 @@ document.head.appendChild(style);
 
             <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
                 <h3 style="color: white; margin-bottom: 15px;">➕ Add New Partner</h3>
-                <input type="text" id="newPartnerName" placeholder="Partner Name" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 10px; font-size: 16px;">
-                <input type="number" id="newPartnerShare" placeholder="Share Percentage" step="0.01" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 10px; font-size: 16px;">
+                <input type="text" id="newPartnerName" placeholder="Partner Name" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 10px; font-size: 16px; box-sizing: border-box;">
+                <input type="number" id="newPartnerShare" placeholder="Share Percentage" step="0.01" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 10px; font-size: 16px; box-sizing: border-box;">
                 <button onclick="addNewPartner()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%;">
                     ✅ Add Partner
                 </button>
