@@ -561,7 +561,8 @@ app.post('/api/import', (req, res) => {
         if (typeof data === 'string') {
             try {
                 importData = JSON.parse(data);
-            } catch (e) {
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
                 return res.status(400).json({ error: 'Invalid backup file format' });
             }
         }
@@ -571,32 +572,38 @@ app.post('/api/import', (req, res) => {
             return res.status(400).json({ error: 'Invalid backup file format' });
         }
 
-        // Support both old and new format
-        if (importData.partners && importData.state) {
-            // New format from export
-            PARTNERS = importData.partners;
-            state = importData.state;
-
-            // Ensure extraPayments is properly initialized
-            if (!state.extraPayments) {
-                state.extraPayments = {};
-            }
-            Object.keys(PARTNERS).forEach(key => {
-                if (state.extraPayments[key] === undefined) {
-                    state.extraPayments[key] = 0;
-                }
-            });
-
-            if (importData.approvedUsers && Array.isArray(importData.approvedUsers)) {
-                approvedUsers = new Set(importData.approvedUsers);
-            }
-        } else {
+        // Check required fields
+        if (!importData.partners || !importData.state) {
             return res.status(400).json({ error: 'Invalid backup file format' });
         }
 
-        console.log('📥 Data imported successfully');
-        console.log(`   Partners: ${Object.keys(PARTNERS).length}`);
-        console.log(`   Payments: ${state.payments ? state.payments.length : 0}`);
+        console.log('📥 Starting import...');
+        console.log(`   Partners: ${Object.keys(importData.partners).length}`);
+        console.log(`   Payments: ${importData.state.payments ? importData.state.payments.length : 0}`);
+
+        // Import partners configuration
+        PARTNERS = importData.partners;
+
+        // Import state
+        state = importData.state;
+
+        // Ensure extraPayments exists for all partners
+        if (!state.extraPayments) {
+            state.extraPayments = {};
+        }
+        Object.keys(PARTNERS).forEach(key => {
+            if (state.extraPayments[key] === undefined) {
+                state.extraPayments[key] = 0;
+            }
+        });
+
+        // Import approved users (optional)
+        if (importData.approvedUsers && Array.isArray(importData.approvedUsers)) {
+            approvedUsers = new Set(importData.approvedUsers);
+            console.log(`   Approved users: ${approvedUsers.size}`);
+        }
+
+        console.log('✅ Data imported successfully');
 
         res.json({ 
             success: true, 
