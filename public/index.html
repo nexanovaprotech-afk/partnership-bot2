@@ -1033,7 +1033,21 @@
                 <button class="btn btn-secondary" onclick="togglePendingApprovals()">
                     👥 View Pending Approvals
                 </button>
-                <button class="btn btn-secondary" onclick="resetData()">
+                
+                    <button type="button" onclick="handleExportData()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px;">
+                        <span style="font-size: 20px;">📥</span> Export Data Backup
+                    </button>
+
+                    <button type="button" onclick="handleImportData()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px;">
+                        <span style="font-size: 20px;">📤</span> Import Data Backup
+                    </button>
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleFileSelected(event)">
+
+                    <button type="button" onclick="handleOpenPartnershipConfig()" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px;">
+                        <span style="font-size: 20px;">⚙️</span> Configure Partners & Shares
+                    </button>
+
+                    <button class="btn btn-secondary" onclick="resetData()">
                     🔄 Reset All Data
                 </button>
             </div>
@@ -1902,19 +1916,72 @@
         init();
     
 
+// ========== AUTO SCROLL UTILITY ==========
+function scrollToElement(elementId) {
+    setTimeout(() => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, 100);
+}
 
-// ========== DATA BACKUP & RESTORE FUNCTIONS ==========
+// ========== NOTIFICATION SYSTEM ==========
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 25px;
+        border-radius: 12px;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 10002;
+        animation: slideInTop 0.3s ease;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        max-width: 90%;
+        text-align: center;
+        background: ${type === 'success' ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' : 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)'};
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.animation = 'slideOutTop 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
 
-async function exportBackupData() {
+// Add notification animations
+if (!document.querySelector('style[data-notification-animations]')) {
+    const style = document.createElement('style');
+    style.setAttribute('data-notification-animations', 'true');
+    style.textContent = `
+        @keyframes slideInTop {
+            from { transform: translate(-50%, -100px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        @keyframes slideOutTop {
+            from { transform: translate(-50%, 0); opacity: 1; }
+            to { transform: translate(-50%, -100px); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ========== DATA EXPORT FUNCTION ==========
+async function handleExportData() {
     if (!isAdmin) {
-        showAlert('Admin access required', 'error');
+        showNotification('❌ Admin access required', 'error');
         return;
     }
 
     try {
-        console.log('Exporting backup data...');
+        console.log('Export button clicked - fetching data from server...');
 
-        // Fetch all data from server
+        // Fetch all data from server APIs
         const [stateRes, historyRes, configRes] = await Promise.all([
             fetch(`${APIURL}/api/state?telegramId=${telegramId}`),
             fetch(`${APIURL}/api/history?telegramId=${telegramId}&limit=1000`),
@@ -1925,20 +1992,20 @@ async function exportBackupData() {
         const history = await historyRes.json();
         const config = await configRes.json();
 
-        const backupData = {
+        const exportData = {
             version: "1.0",
             exportDate: new Date().toISOString(),
             exportedBy: userName,
-            initialDebts: config.initialDebts,
+            telegramId: telegramId,
+            initialDebts: config.initialDebts || INITIAL_DEBTS,
             shareholding: SHAREHOLDING,
-            history: history.history || [],
             state: state,
+            history: history.history || [],
             timestamp: Date.now()
         };
 
-        // Create and download JSON file
-        const dataStr = JSON.stringify(backupData, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([dataStr], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -1948,154 +2015,168 @@ async function exportBackupData() {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        showAlert('✅ Backup exported successfully!', 'success');
-        console.log('Backup completed');
+        showNotification('✅ Backup exported successfully!', 'success');
+        console.log('Export completed:', exportData.history.length, 'records');
     } catch (error) {
         console.error('Export error:', error);
-        showAlert('❌ Export failed: ' + error.message, 'error');
+        showNotification('❌ Export failed: ' + error.message, 'error');
     }
 }
 
-function importBackupData() {
-    if (!isAdmin) {
-        showAlert('Admin access required', 'error');
+
+function handleImportData() {
+    console.log('Import button clicked');
+    const fileInput = document.getElementById('importFileInput');
+    if (fileInput) {
+        fileInput.click();
+    } else {
+        console.error('File input not found');
+        showNotification('❌ Import button error', 'error');
+    }
+}
+
+function handleFileSelected(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        console.log('No file selected');
         return;
     }
 
-    const fileInput = document.getElementById('backupFileInput');
-    if (fileInput) {
-        fileInput.click();
-    }
-}
-
-async function handleBackupFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    console.log('Processing backup file:', file.name);
+    console.log('File selected:', file.name);
     const reader = new FileReader();
 
     reader.onload = async function(e) {
         try {
-            const backupData = JSON.parse(e.target.result);
+            const importedData = JSON.parse(e.target.result);
 
-            if (!backupData.version || !backupData.history) {
+            if (!importedData.version || !importedData.history) {
                 throw new Error('Invalid backup file format');
             }
 
-            const confirmMsg = `Import backup from ${new Date(backupData.exportDate).toLocaleString()}?\n\nPayments: ${backupData.history.length}\n\nThis will REPLACE all current data!`;
+            const dateStr = importedData.exportDate ? new Date(importedData.exportDate).toLocaleString() : 'unknown date';
+            const confirmMsg = `Import backup from ${dateStr}?\n\nEntries: ${importedData.entries.length}\nPartners: ${Object.keys(importedData.partnerships).length}\n\nThis will replace current data!`;
 
-            if (!confirm(confirmMsg)) {
-                console.log('Import cancelled by user');
-                return;
-            }
+            if (confirm(confirmMsg)) {
+                console.log('User confirmed import');
 
-            // Send backup data to server for import
-            const response = await fetch(`${APIURL}/api/import-backup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    telegramId: telegramId,
-                    backupData: backupData
+                // Send to server
+                fetch('/api/import-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(importedData)
                 })
-            });
-
-            if (response.ok) {
-                showAlert('✅ Backup imported successfully!', 'success');
-                console.log('Import successful, reloading...');
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Import result:', result);
+                    if (result.success) {
+                        entries = importedData.entries;
+                        partnerships = importedData.partnerships;
+                        updateEntriesTable();
+                        updatePartnerSelect();
+                        showNotification('✅ Data imported successfully!', 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showNotification('❌ Import failed: ' + result.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Import API error:', error);
+                    showNotification('❌ Import failed: ' + error.message, 'error');
+                });
             } else {
-                const error = await response.json();
-                showAlert('❌ Import failed: ' + (error.message || 'Unknown error'), 'error');
+                console.log('User cancelled import');
             }
         } catch (error) {
-            console.error('Import error:', error);
-            showAlert('❌ Invalid backup file: ' + error.message, 'error');
+            console.error('File parse error:', error);
+            showNotification('❌ Invalid backup file: ' + error.message, 'error');
         }
     };
 
     reader.onerror = function() {
-        showAlert('❌ Failed to read file', 'error');
+        console.error('File read error');
+        showNotification('❌ Failed to read file', 'error');
     };
 
     reader.readAsText(file);
-    event.target.value = ''; // Reset input
+    event.target.value = ''; // Reset file input
 }
 
 // ========== PARTNERSHIP CONFIGURATION ==========
+let tempPartnerships = {};
 
-let tempPartnershipConfig = {};
-
-async function openPartnershipManager() {
+async function handleOpenPartnershipConfig() {
     if (!isAdmin) {
-        showAlert('Admin access required', 'error');
+        showNotification('❌ Admin access required', 'error');
         return;
     }
 
+    console.log('Opening partnership config');
     try {
-        // Fetch current partnerships from server
-        const response = await fetch(`${APIURL}/api/partnerships`);
-        if (response.ok) {
-            const data = await response.json();
-            tempPartnershipConfig = data.partnerships || { A: 30, B: 30, C: 40 };
+        // Initialize with default shareholding
+        tempPartnerships = {
+            'Bhargav (A)': SHAREHOLDING.A * 100,
+            'Sagar (B)': SHAREHOLDING.B * 100,
+            'Bharat (C)': SHAREHOLDING.C * 100
+        };
+
+        renderPartnershipConfigList();
+        const modal = document.getElementById('partnershipConfigModal');
+        if (modal) {
+            modal.style.display = 'block';
+            scrollToElement('partnershipConfigModal');
+            showNotification('📝 Edit partners and shares', 'info');
         } else {
-            tempPartnershipConfig = { A: 30, B: 30, C: 40 };
+            console.error('Partnership modal not found');
+            showNotification('❌ Modal not found', 'error');
         }
-
-        renderPartnershipConfig();
-        document.getElementById('partnershipManagerModal').classList.add('show');
-
-        // Scroll to modal
-        setTimeout(() => {
-            document.getElementById('partnershipManagerModal').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-
-        showAlert('📝 Edit partnership configuration', 'info');
     } catch (error) {
-        console.error('Error opening partnership manager:', error);
-        showAlert('❌ Failed to load partnerships', 'error');
+        console.error('Error opening partnership config:', error);
+        showNotification('❌ Failed to open: ' + error.message, 'error');
     }
 }
 
-function closePartnershipManager() {
-    document.getElementById('partnershipManagerModal').classList.remove('show');
-    document.getElementById('newPartnerNameField').value = '';
-    document.getElementById('newPartnerShareField').value = '';
+function handleClosePartnershipConfig() {
+    console.log('Closing partnership config');
+    const modal = document.getElementById('partnershipConfigModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    document.getElementById('newPartnerNameInput').value = '';
+    document.getElementById('newPartnerShareInput').value = '';
 }
 
-function renderPartnershipConfig() {
-    const container = document.getElementById('partnersConfigList');
-    if (!container) return;
-
-    const partnerKeys = Object.keys(tempPartnershipConfig);
-
-    if (partnerKeys.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No partners configured. Add one below.</p>';
+function renderPartnershipConfigList() {
+    const container = document.getElementById('partnersListConfigContainer');
+    if (!container) {
+        console.error('Partners list container not found');
         return;
     }
 
-    let html = '';
-    let totalPercentage = 0;
+    const partnerNames = Object.keys(tempPartnerships);
 
-    partnerKeys.forEach((key, index) => {
-        const share = parseFloat(tempPartnershipConfig[key]);
-        totalPercentage += share;
-        const escapedKey = key.replace(/'/g, "\\'");
+    if (partnerNames.length === 0) {
+        container.innerHTML = '<p style="color: white; text-align: center; padding: 20px; margin: 0;">No partners configured yet.<br>Add your first partner below.</p>';
+        return;
+    }
 
-        html += `
-            <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-                    <input type="text" id="partnerKey_${index}" value="${key}" placeholder="Code" style="width: 80px; padding: 8px; font-weight: bold;">
-                    <input type="number" id="partnerShare_${index}" value="${share}" step="0.01" min="0" max="100" placeholder="%" style="flex: 1; padding: 8px;">
-                    <span style="font-weight: bold;">%</span>
+    let htmlContent = '';
+    partnerNames.forEach((name, index) => {
+        const share = tempPartnerships[name];
+        const escapedName = name.replace(/'/g, "\\'");
+        htmlContent += `
+            <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <input type="text" id="partnerName_${index}" value="${name}" style="flex: 2; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; box-sizing: border-box;">
+                    <input type="number" id="partnerShare_${index}" value="${share}" step="0.01" min="0" max="100" style="flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                    <span style="color: white; font-weight: bold; font-size: 14px;">%</span>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-primary btn-small" onclick="updatePartnerInConfig('${escapedKey}', ${index})" style="flex: 1;">
+                    <button type="button" onclick="handleUpdatePartner('${escapedName}', ${index})" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; font-size: 13px;">
                         ✅ Update
                     </button>
-                    <button class="btn btn-danger btn-small" onclick="removePartnerFromConfig('${escapedKey}')" style="flex: 1;">
+                    <button type="button" onclick="handleDeletePartner('${escapedName}')" style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">
                         🗑️ Delete
                     </button>
                 </div>
@@ -2103,149 +2184,172 @@ function renderPartnershipConfig() {
         `;
     });
 
-    // Total percentage indicator
+    // Add total percentage indicator
+    const totalPercentage = Object.values(tempPartnerships).reduce((sum, val) => sum + parseFloat(val), 0);
     const isValid = Math.abs(totalPercentage - 100) < 0.01;
-    html += `
-        <div style="background: ${isValid ? '#d4edda' : '#f8d7da'}; padding: 15px; border-radius: 8px; text-align: center; margin-top: 10px; border: 2px solid ${isValid ? '#28a745' : '#dc3545'};">
-            <strong style="font-size: 18px; color: ${isValid ? '#155724' : '#721c24'};">
+    htmlContent += `
+        <div style="background: ${isValid ? 'rgba(56,239,125,0.3)' : 'rgba(255,107,107,0.3)'}; padding: 15px; border-radius: 10px; text-align: center; margin-top: 10px;">
+            <span style="color: white; font-weight: bold; font-size: 18px;">
                 Total: ${totalPercentage.toFixed(2)}% ${isValid ? '✅' : '⚠️ Should be 100%'}
-            </strong>
+            </span>
         </div>
     `;
 
-    container.innerHTML = html;
+    container.innerHTML = htmlContent;
 }
 
-function addPartnerToConfig() {
-    const nameField = document.getElementById('newPartnerNameField');
-    const shareField = document.getElementById('newPartnerShareField');
+function handleAddNewPartner() {
+    console.log('Adding new partner');
+    const nameInput = document.getElementById('newPartnerNameInput');
+    const shareInput = document.getElementById('newPartnerShareInput');
 
-    const name = nameField.value.trim().toUpperCase();
-    const share = parseFloat(shareField.value);
+    const name = nameInput.value.trim();
+    const share = parseFloat(shareInput.value);
 
     if (!name) {
-        showAlert('❌ Enter partner code (e.g., A, B, C)', 'error');
+        showNotification('❌ Please enter partner name', 'error');
         return;
     }
 
     if (isNaN(share) || share <= 0 || share > 100) {
-        showAlert('❌ Enter valid share (0-100)', 'error');
+        showNotification('❌ Please enter valid share (0-100)', 'error');
         return;
     }
 
-    if (tempPartnershipConfig[name]) {
-        showAlert('❌ Partner code already exists', 'error');
+    if (tempPartnerships[name]) {
+        showNotification('❌ Partner already exists', 'error');
         return;
     }
 
-    tempPartnershipConfig[name] = share;
-    nameField.value = '';
-    shareField.value = '';
-    renderPartnershipConfig();
-    showAlert('✅ Partner added', 'success');
+    tempPartnerships[name] = share;
+    nameInput.value = '';
+    shareInput.value = '';
+    renderPartnershipConfigList();
+    showNotification('✅ Partner added: ' + name, 'success');
+    console.log('Partner added:', name, share);
 }
 
-function updatePartnerInConfig(oldKey, index) {
-    const newKey = document.getElementById(`partnerKey_${index}`).value.trim().toUpperCase();
-    const newShare = parseFloat(document.getElementById(`partnerShare_${index}`).value);
+function handleUpdatePartner(oldName, index) {
+    console.log('Updating partner:', oldName);
+    const newName = document.getElementById('partnerName_' + index).value.trim();
+    const newShare = parseFloat(document.getElementById('partnerShare_' + index).value);
 
-    if (!newKey) {
-        showAlert('❌ Partner code cannot be empty', 'error');
-        renderPartnershipConfig();
+    if (!newName) {
+        showNotification('❌ Partner name cannot be empty', 'error');
+        renderPartnershipConfigList();
         return;
     }
 
     if (isNaN(newShare) || newShare <= 0 || newShare > 100) {
-        showAlert('❌ Invalid share percentage', 'error');
-        renderPartnershipConfig();
+        showNotification('❌ Invalid share percentage', 'error');
+        renderPartnershipConfigList();
         return;
     }
 
-    if (newKey !== oldKey && tempPartnershipConfig[newKey]) {
-        showAlert('❌ Partner code already exists', 'error');
-        renderPartnershipConfig();
+    // Check if name changed and new name already exists
+    if (newName !== oldName && tempPartnerships[newName]) {
+        showNotification('❌ Partner name already exists', 'error');
+        renderPartnershipConfigList();
         return;
     }
 
-    if (newKey !== oldKey) {
-        delete tempPartnershipConfig[oldKey];
+    // Delete old entry if name changed
+    if (newName !== oldName) {
+        delete tempPartnerships[oldName];
     }
 
-    tempPartnershipConfig[newKey] = newShare;
-    renderPartnershipConfig();
-    showAlert('✅ Partner updated', 'success');
+    // Add/update with new values
+    tempPartnerships[newName] = newShare;
+    renderPartnershipConfigList();
+    showNotification('✅ Partner updated', 'success');
+    console.log('Partner updated:', newName, newShare);
 }
 
-function removePartnerFromConfig(key) {
-    if (confirm(`Delete partner "${key}"?`)) {
-        delete tempPartnershipConfig[key];
-        renderPartnershipConfig();
-        showAlert('✅ Partner removed', 'success');
+function handleDeletePartner(name) {
+    console.log('Deleting partner:', name);
+    if (confirm(`Delete partner "${name}"?`)) {
+        delete tempPartnerships[name];
+        renderPartnershipConfigList();
+        showNotification('✅ Partner deleted', 'success');
+        console.log('Partner deleted:', name);
     }
 }
 
-async function savePartnershipConfiguration() {
-    const totalPercentage = Object.values(tempPartnershipConfig).reduce((sum, val) => sum + parseFloat(val), 0);
+async function handleSavePartnershipConfig() {
+    console.log('Saving partnership configuration');
+    const totalPercentage = Object.values(tempPartnerships).reduce((sum, val) => sum + parseFloat(val), 0);
 
     if (Math.abs(totalPercentage - 100) > 0.01) {
-        if (!confirm(`Total is ${totalPercentage.toFixed(2)}%, not 100%. Continue anyway?`)) {
+        const confirmMsg = `Total percentage is ${totalPercentage.toFixed(2)}%, not 100%.\n\nContinue anyway?`;
+        if (!confirm(confirmMsg)) {
             return;
         }
     }
 
-    try {
-        const response = await fetch(`${APIURL}/api/partnerships`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                telegramId: telegramId,
-                partnerships: tempPartnershipConfig
-            })
-        });
+    // Send to server
+    fetch('/api/update-partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerships: tempPartnerships })
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('Save result:', result);
+        if (result.success) {
+            partnerships = JSON.parse(JSON.stringify(tempPartnerships));
+            updatePartnerSelect();
+            handleClosePartnershipConfig();
+            showNotification('✅ Partnership configuration saved!', 'success');
 
-        if (response.ok) {
-            showAlert('✅ Partnership configuration saved!', 'success');
-            closePartnershipManager();
-
-            // Reload data to reflect changes
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
+            // Recalculate all entries with new shares
+            entries.forEach(entry => {
+                const partnerName = entry.partner || entry.type;
+                if (partnerships[partnerName]) {
+                    entry.share = partnerships[partnerName];
+                    entry.partnerAmount = (entry.actualAmount * entry.share) / 100;
+                }
+            });
+            updateEntriesTable();
+            console.log('Partnerships updated successfully');
         } else {
-            const error = await response.json();
-            showAlert('❌ Save failed: ' + (error.message || 'Unknown error'), 'error');
+            showNotification('❌ Save failed: ' + result.message, 'error');
         }
-    } catch (error) {
-        console.error('Save error:', error);
-        showAlert('❌ Failed to save: ' + error.message, 'error');
-    }
+    })
+    .catch(error => {
+        console.error('Save API error:', error);
+        showNotification('❌ Failed to save: ' + error.message, 'error');
+    });
 }
 
-console.log('✅ Backup and Partnership functions loaded');
+console.log('✅ All backup and partnership functions loaded');
 
 </script>
 
-    <!-- Partnership Manager Modal -->
-    <div id="partnershipManagerModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">👥 Partnership Configuration</div>
-            <div class="modal-body">
-                <div id="partnersConfigList" style="margin-bottom: 20px; max-height: 400px; overflow-y: auto;">
-                    <!-- Partners list will be rendered here -->
-                </div>
+    <!-- Partnership Configuration Modal -->
+    <div id="partnershipConfigModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; overflow-y: auto; padding: 15px; box-sizing: border-box;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 10px auto; padding: 20px; border-radius: 20px; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+            <h2 style="color: white; text-align: center; margin: 0 0 20px 0; font-size: 20px;">👥 Partnership Configuration</h2>
 
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                    <h4 style="margin: 0 0 12px 0; font-size: 16px;">➕ Add New Partner</h4>
-                    <input type="text" id="newPartnerNameField" placeholder="Partner Name" style="width: 100%; margin-bottom: 8px;">
-                    <input type="number" id="newPartnerShareField" placeholder="Share %" step="0.01" min="0" max="100" style="width: 100%; margin-bottom: 8px;">
-                    <button class="btn btn-success" onclick="addPartnerToConfig()" style="width: 100%;">
-                        ✅ Add Partner
-                    </button>
-                </div>
+            <div id="partnersListConfigContainer" style="margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+                <!-- Partners will be listed here -->
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-success btn-small" onclick="savePartnershipConfiguration()">💾 Save</button>
-                <button class="btn btn-secondary btn-small" onclick="closePartnershipManager()">❌ Cancel</button>
+
+            <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 15px; margin-bottom: 15px;">
+                <h3 style="color: white; margin: 0 0 12px 0; font-size: 16px;">➕ Add New Partner</h3>
+                <input type="text" id="newPartnerNameInput" placeholder="Partner Name" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 8px; font-size: 15px; box-sizing: border-box;">
+                <input type="number" id="newPartnerShareInput" placeholder="Share Percentage" step="0.01" min="0" max="100" style="width: 100%; padding: 12px; border: none; border-radius: 10px; margin-bottom: 8px; font-size: 15px; box-sizing: border-box;">
+                <button type="button" onclick="handleAddNewPartner()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px;">
+                    ✅ Add Partner
+                </button>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button type="button" onclick="handleSavePartnershipConfig()" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-weight: bold; flex: 1; font-size: 15px;">
+                    💾 Save
+                </button>
+                <button type="button" onclick="handleClosePartnershipConfig()" style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-weight: bold; flex: 1; font-size: 15px;">
+                    ❌ Cancel
+                </button>
             </div>
         </div>
     </div>
