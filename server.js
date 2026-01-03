@@ -636,7 +636,6 @@ app.post('/api/admin/reset', (req, res) => {
 });
 
 
-
 // ==================== DATA BACKUP & RESTORE ENDPOINTS ====================
 
 app.post('/api/import-data', (req, res) => {
@@ -647,11 +646,8 @@ app.post('/api/import-data', (req, res) => {
             return res.json({ success: false, message: 'Invalid data format' });
         }
 
-        // Replace current data
         data.entries = entries;
         data.partnerships = partnerships;
-
-        // Save to file
         saveData();
 
         console.log(`Data imported from backup (${exportDate || 'unknown date'})`);
@@ -675,7 +671,6 @@ app.get('/api/export-data', (req, res) => {
             exportDate: new Date().toISOString(),
             version: "1.0"
         };
-
         res.json({ success: true, data: exportData });
     } catch (error) {
         console.error('Export error:', error);
@@ -693,13 +688,10 @@ app.post('/api/update-partnerships', (req, res) => {
             return res.json({ success: false, message: 'Invalid partnerships data' });
         }
 
-        // Validate percentages
         const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
 
-        // Update partnerships
         data.partnerships = partnerships;
 
-        // Update existing entries with new share percentages
         data.entries.forEach(entry => {
             const partnerName = entry.partner || entry.type;
             if (partnerships[partnerName]) {
@@ -708,10 +700,9 @@ app.post('/api/update-partnerships', (req, res) => {
             }
         });
 
-        // Save to file
         saveData();
 
-        console.log(`Partnerships updated. Total percentage: ${totalPercentage.toFixed(2)}%`);
+        console.log(`Partnerships updated. Total: ${totalPercentage.toFixed(2)}%`);
         console.log('Partners:', Object.keys(partnerships).join(', '));
 
         res.json({ 
@@ -725,6 +716,7 @@ app.post('/api/update-partnerships', (req, res) => {
         res.json({ success: false, message: error.message });
     }
 });
+
 
 app.listen(process.env.PORT || 10000, () => {
     console.log('🚀 Partnership Calculator Server v2.0');
