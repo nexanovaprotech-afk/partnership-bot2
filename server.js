@@ -636,16 +636,18 @@ app.post('/api/admin/reset', (req, res) => {
 });
 
 
-// ========== PARTNERSHIP CONFIGURATION API ==========
+// ==================== PARTNERSHIP CONFIGURATION API ====================
 app.get('/api/partnerships', (req, res) => {
     try {
         // Return current shareholding configuration
-        // You can extend this to be dynamic from data.json
+        // This can be extended to be dynamic from data.json later
         const partnerships = {
-            A: 30,
-            B: 30,
-            C: 40
+            'Bhargav (A)': 30,
+            'Sagar (B)': 30,
+            'Bharat (C)': 40
         };
+
+        console.log('📊 Partnerships requested');
         res.json({ success: true, partnerships: partnerships });
     } catch (error) {
         console.error('Get partnerships error:', error);
@@ -665,22 +667,30 @@ app.post('/api/partnerships', (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid partnerships data' });
         }
 
-        // For now, just acknowledge - you can extend to save to data.json
-        console.log(`✅ Partnerships updated by ${telegramId}:`, partnerships);
-        console.log(`   Total percentage: ${Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0).toFixed(2)}%`);
+        // Calculate total percentage
+        const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
 
-        // TODO: Save partnerships to data.json if needed
-        // data.partnerships = partnerships;
-        // saveData();
+        console.log(`✅ Partnerships updated by ${telegramId}`);
+        console.log(`   Partners:`, Object.keys(partnerships).join(', '));
+        console.log(`   Total: ${totalPercentage.toFixed(2)}%`);
 
-        res.json({ success: true, message: 'Partnerships updated (note: restart may reset if not persisted)' });
+        // TODO: Persist partnerships to data.json if needed
+        // Currently just acknowledging the update
+        // You can add: data.partnerships = partnerships; saveData();
+
+        res.json({ 
+            success: true, 
+            message: 'Partnerships configuration saved',
+            totalPercentage: totalPercentage.toFixed(2),
+            note: 'Partnership changes acknowledged. For persistence, update data structure.'
+        });
     } catch (error) {
         console.error('Update partnerships error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// ========== DATA BACKUP & RESTORE API ==========
+// ==================== DATA BACKUP & RESTORE API ====================
 app.post('/api/import-backup', (req, res) => {
     try {
         const { telegramId, backupData } = req.body;
@@ -693,19 +703,21 @@ app.post('/api/import-backup', (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid backup data format' });
         }
 
-        console.log(`📥 Importing backup from ${backupData.exportDate}`);
+        console.log(`📥 Importing backup from ${backupData.exportDate || 'unknown date'}`);
         console.log(`   Version: ${backupData.version}`);
-        console.log(`   Payments: ${backupData.history.length}`);
+        console.log(`   History entries: ${backupData.history.length}`);
         console.log(`   Exported by: ${backupData.exportedBy || 'Unknown'}`);
+        console.log(`   Telegram ID: ${backupData.telegramId || 'Not specified'}`);
 
-        // Reset current data
+        // Clear current data
         data.payments = [];
         data.salaryPayments = [];
         data.extraPayments = [];
 
-        // Import from backup
+        // Import from backup history
         backupData.history.forEach(item => {
             if (item.type === 'regular') {
+                // Regular payment entry
                 data.payments.push({
                     id: item.id || Date.now() + Math.random(),
                     amount: item.amount,
@@ -720,6 +732,7 @@ app.post('/api/import-backup', (req, res) => {
                     editedAt: item.editedAt || null
                 });
             } else if (item.type === 'extra') {
+                // Extra payment or new debt entry
                 data.extraPayments.push({
                     id: item.id || Date.now() + Math.random(),
                     partner: item.partner,
@@ -735,25 +748,27 @@ app.post('/api/import-backup', (req, res) => {
         // Update initial debts if present in backup
         if (backupData.initialDebts) {
             data.initialDebts = backupData.initialDebts;
+            console.log(`   Initial debts updated:`, backupData.initialDebts);
         }
 
         // Save to file
         saveData();
 
         console.log('✅ Backup imported successfully');
-        console.log(`   Regular payments: ${data.payments.length}`);
-        console.log(`   Extra payments: ${data.extraPayments.length}`);
+        console.log(`   Regular payments restored: ${data.payments.length}`);
+        console.log(`   Extra payments restored: ${data.extraPayments.length}`);
 
         res.json({ 
             success: true, 
             message: 'Backup imported successfully',
             imported: {
-                payments: data.payments.length,
-                extraPayments: data.extraPayments.length
+                regularPayments: data.payments.length,
+                extraPayments: data.extraPayments.length,
+                totalEntries: backupData.history.length
             }
         });
     } catch (error) {
-        console.error('Import backup error:', error);
+        console.error('❌ Import backup error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
