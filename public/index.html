@@ -2104,7 +2104,7 @@ function handleFileSelected(event) {
         try {
             const importedData = JSON.parse(e.target.result);
 
-            // Validate backup structure
+            // Validate backup structure (new format with partners/state)
             if (!importedData.partners || !importedData.state) {
                 throw new Error('Invalid backup file format');
             }
@@ -2117,7 +2117,7 @@ function handleFileSelected(event) {
 
             if (confirm(confirmMsg)) {
                 console.log('User confirmed import');
-                showAlert('Importing data...', 'info');
+                showAlert('📥 Importing data...', 'info');
 
                 // Send to server
                 try {
@@ -2134,10 +2134,11 @@ function handleFileSelected(event) {
                     console.log('Import result:', result);
 
                     if (result.success) {
-                        showAlert('✅ Data imported successfully!', 'success');
+                        showAlert('✅ Import successful! Refreshing...', 'success');
+                        // Reload the page after a short delay to show all new data
                         setTimeout(() => {
                             location.reload();
-                        }, 1500);
+                        }, 1000);
                     } else {
                         showAlert('❌ Import failed: ' + (result.error || result.message), 'error');
                     }
