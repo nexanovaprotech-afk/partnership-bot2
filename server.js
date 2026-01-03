@@ -636,18 +636,41 @@ app.post('/api/admin/reset', (req, res) => {
 });
 
 
-// ========== DATA BACKUP & RESTORE ==========
+// ==================== DATA BACKUP & RESTORE API ====================
 app.post('/api/import-data', (req, res) => {
     try {
         const { entries, partnerships, exportDate, version } = req.body;
+
         if (!entries || !partnerships) {
+            console.error('Invalid import data format');
             return res.json({ success: false, message: 'Invalid data format' });
         }
+
+        // Backup current data before import
+        const backup = {
+            entries: data.entries,
+            partnerships: data.partnerships,
+            timestamp: new Date().toISOString()
+        };
+        console.log('Creating backup before import...');
+
+        // Replace with imported data
         data.entries = entries;
         data.partnerships = partnerships;
+
+        // Save to file
         saveData();
-        console.log(`✅ Data imported from ${exportDate || 'backup'}`);
-        res.json({ success: true, message: 'Imported', entriesCount: entries.length, partnersCount: Object.keys(partnerships).length });
+
+        console.log(`✅ Data imported successfully from ${exportDate || 'backup'}`);
+        console.log(`   - Entries: ${entries.length}`);
+        console.log(`   - Partners: ${Object.keys(partnerships).length}`);
+
+        res.json({ 
+            success: true, 
+            message: 'Data imported successfully',
+            entriesCount: entries.length,
+            partnersCount: Object.keys(partnerships).length
+        });
     } catch (error) {
         console.error('Import error:', error);
         res.json({ success: false, message: error.message });
@@ -656,7 +679,17 @@ app.post('/api/import-data', (req, res) => {
 
 app.get('/api/export-data', (req, res) => {
     try {
-        const exportData = { entries: data.entries, partnerships: data.partnerships, exportDate: new Date().toISOString(), version: "1.0" };
+        const exportData = {
+            entries: data.entries,
+            partnerships: data.partnerships,
+            exportDate: new Date().toISOString(),
+            version: "1.0"
+        };
+
+        console.log('✅ Data exported');
+        console.log(`   - Entries: ${data.entries.length}`);
+        console.log(`   - Partners: ${Object.keys(data.partnerships).length}`);
+
         res.json({ success: true, data: exportData });
     } catch (error) {
         console.error('Export error:', error);
@@ -664,15 +697,23 @@ app.get('/api/export-data', (req, res) => {
     }
 });
 
-// ========== PARTNERSHIP CONFIGURATION ==========
+// ==================== PARTNERSHIP CONFIGURATION API ====================
 app.post('/api/update-partnerships', (req, res) => {
     try {
         const { partnerships } = req.body;
+
         if (!partnerships || typeof partnerships !== 'object') {
+            console.error('Invalid partnerships data');
             return res.json({ success: false, message: 'Invalid partnerships data' });
         }
+
+        // Calculate total percentage
         const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
+
+        // Update partnerships
         data.partnerships = partnerships;
+
+        // Update all existing entries with new share percentages
         data.entries.forEach(entry => {
             const partnerName = entry.partner || entry.type;
             if (partnerships[partnerName]) {
@@ -680,14 +721,26 @@ app.post('/api/update-partnerships', (req, res) => {
                 entry.partnerAmount = (entry.actualAmount * entry.share) / 100;
             }
         });
+
+        // Save to file
         saveData();
-        console.log(`✅ Partnerships updated. Total: ${totalPercentage.toFixed(2)}%. Partners: ${Object.keys(partnerships).join(', ')}`);
-        res.json({ success: true, message: 'Updated', totalPercentage: totalPercentage.toFixed(2), partnersCount: Object.keys(partnerships).length });
+
+        console.log('✅ Partnerships updated successfully');
+        console.log(`   - Total percentage: ${totalPercentage.toFixed(2)}%`);
+        console.log(`   - Partners: ${Object.keys(partnerships).join(', ')}`);
+
+        res.json({ 
+            success: true, 
+            message: 'Partnerships updated successfully',
+            totalPercentage: totalPercentage.toFixed(2),
+            partnersCount: Object.keys(partnerships).length
+        });
     } catch (error) {
         console.error('Update partnerships error:', error);
         res.json({ success: false, message: error.message });
     }
 });
+
 
 app.listen(process.env.PORT || 10000, () => {
     console.log('🚀 Partnership Calculator Server v2.0');
