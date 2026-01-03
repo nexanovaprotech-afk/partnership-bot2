@@ -636,27 +636,18 @@ app.post('/api/admin/reset', (req, res) => {
 });
 
 
-// ==================== DATA BACKUP & RESTORE ENDPOINTS ====================
-
+// ========== DATA BACKUP & RESTORE ==========
 app.post('/api/import-data', (req, res) => {
     try {
         const { entries, partnerships, exportDate, version } = req.body;
-
         if (!entries || !partnerships) {
             return res.json({ success: false, message: 'Invalid data format' });
         }
-
         data.entries = entries;
         data.partnerships = partnerships;
         saveData();
-
-        console.log(`Data imported from backup (${exportDate || 'unknown date'})`);
-        res.json({ 
-            success: true, 
-            message: 'Data imported successfully',
-            entriesCount: entries.length,
-            partnersCount: Object.keys(partnerships).length
-        });
+        console.log(`✅ Data imported from ${exportDate || 'backup'}`);
+        res.json({ success: true, message: 'Imported', entriesCount: entries.length, partnersCount: Object.keys(partnerships).length });
     } catch (error) {
         console.error('Import error:', error);
         res.json({ success: false, message: error.message });
@@ -665,12 +656,7 @@ app.post('/api/import-data', (req, res) => {
 
 app.get('/api/export-data', (req, res) => {
     try {
-        const exportData = {
-            entries: data.entries,
-            partnerships: data.partnerships,
-            exportDate: new Date().toISOString(),
-            version: "1.0"
-        };
+        const exportData = { entries: data.entries, partnerships: data.partnerships, exportDate: new Date().toISOString(), version: "1.0" };
         res.json({ success: true, data: exportData });
     } catch (error) {
         console.error('Export error:', error);
@@ -678,20 +664,15 @@ app.get('/api/export-data', (req, res) => {
     }
 });
 
-// ==================== PARTNERSHIP CONFIGURATION ENDPOINT ====================
-
+// ========== PARTNERSHIP CONFIGURATION ==========
 app.post('/api/update-partnerships', (req, res) => {
     try {
         const { partnerships } = req.body;
-
         if (!partnerships || typeof partnerships !== 'object') {
             return res.json({ success: false, message: 'Invalid partnerships data' });
         }
-
         const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
-
         data.partnerships = partnerships;
-
         data.entries.forEach(entry => {
             const partnerName = entry.partner || entry.type;
             if (partnerships[partnerName]) {
@@ -699,24 +680,14 @@ app.post('/api/update-partnerships', (req, res) => {
                 entry.partnerAmount = (entry.actualAmount * entry.share) / 100;
             }
         });
-
         saveData();
-
-        console.log(`Partnerships updated. Total: ${totalPercentage.toFixed(2)}%`);
-        console.log('Partners:', Object.keys(partnerships).join(', '));
-
-        res.json({ 
-            success: true, 
-            message: 'Partnerships updated successfully',
-            totalPercentage: totalPercentage.toFixed(2),
-            partnersCount: Object.keys(partnerships).length
-        });
+        console.log(`✅ Partnerships updated. Total: ${totalPercentage.toFixed(2)}%. Partners: ${Object.keys(partnerships).join(', ')}`);
+        res.json({ success: true, message: 'Updated', totalPercentage: totalPercentage.toFixed(2), partnersCount: Object.keys(partnerships).length });
     } catch (error) {
         console.error('Update partnerships error:', error);
         res.json({ success: false, message: error.message });
     }
 });
-
 
 app.listen(process.env.PORT || 10000, () => {
     console.log('🚀 Partnership Calculator Server v2.0');
