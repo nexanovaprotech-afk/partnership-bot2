@@ -562,7 +562,7 @@ app.post('/api/import', (req, res) => {
             try {
                 importData = JSON.parse(data);
             } catch (parseError) {
-                console.error('JSON parse error:', parseError);
+                console.error('❌ JSON parse error:', parseError);
                 return res.status(400).json({ error: 'Invalid backup file format' });
             }
         }
@@ -584,7 +584,7 @@ app.post('/api/import', (req, res) => {
         // Import partners configuration
         PARTNERS = importData.partners;
 
-        // Import state
+        // Import state (all payment data)
         state = importData.state;
 
         // Ensure extraPayments exists for all partners
@@ -597,6 +597,11 @@ app.post('/api/import', (req, res) => {
             }
         });
 
+        // Ensure payments array exists
+        if (!state.payments) {
+            state.payments = [];
+        }
+
         // Import approved users (optional)
         if (importData.approvedUsers && Array.isArray(importData.approvedUsers)) {
             approvedUsers = new Set(importData.approvedUsers);
@@ -604,13 +609,18 @@ app.post('/api/import', (req, res) => {
         }
 
         console.log('✅ Data imported successfully');
+        console.log(`   Total payments in state: ${state.payments.length}`);
+        console.log(`   Total debt paid: ${state.totalDebtPaid || 0}`);
 
         res.json({ 
             success: true, 
+            message: 'Data imported successfully',
             imported: { 
                 partners: Object.keys(PARTNERS).length,
-                payments: state.payments ? state.payments.length : 0,
-                users: approvedUsers.size
+                payments: state.payments.length,
+                users: approvedUsers.size,
+                totalDebtPaid: state.totalDebtPaid || 0,
+                totalSalaryPaid: state.totalSalaryPaid || 0
             } 
         });
     } catch (error) {
