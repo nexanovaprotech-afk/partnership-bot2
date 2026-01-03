@@ -555,29 +555,52 @@ app.post('/api/import', (req, res) => {
         return res.status(403).json({ error: 'Admin access required' });
     }
 
-    if (!data || !data.version) {
-        return res.status(400).json({ error: 'Invalid import data' });
-    }
-
     try {
-        // Import partners configuration
-        if (data.partners) {
-            PARTNERS = data.partners;
+        // Parse data if it's a string
+        let importData = data;
+        if (typeof data === 'string') {
+            try {
+                importData = JSON.parse(data);
+            } catch (parseError) {
+                return res.status(400).json({ error: 'Invalid JSON format' });
+            }
         }
+
+        // Validate import data structure
+        if (!importData || typeof importData !== 'object') {
+            return res.status(400).json({ error: 'Invalid backup file format' });
+        }
+
+        // Check if it has required fields (partners and state)
+        if (!importData.partners || !importData.state) {
+            return res.status(400).json({ error: 'Invalid backup file format - missing required data' });
+        }
+
+        // Import partners configuration
+        PARTNERS = importData.partners;
 
         // Import state
-        if (data.state) {
-            state = data.state;
+        state = importData.state;
+
+        // Ensure extraPayments object exists for all partners
+        if (!state.extraPayments) {
+            state.extraPayments = {};
         }
+        Object.keys(PARTNERS).forEach(key => {
+            if (state.extraPayments[key] === undefined) {
+                state.extraPayments[key] = 0;
+            }
+        });
 
         // Import approved users (optional)
-        if (data.approvedUsers) {
-            approvedUsers = new Set(data.approvedUsers);
+        if (importData.approvedUsers && Array.isArray(importData.approvedUsers)) {
+            approvedUsers = new Set(importData.approvedUsers);
         }
 
         console.log('📥 Data imported successfully');
         console.log(`   Partners: ${Object.keys(PARTNERS).length}`);
         console.log(`   Payments: ${state.payments.length}`);
+        console.log(`   Users: ${approvedUsers.size}`);
 
         res.json({ 
             success: true, 
@@ -588,7 +611,7 @@ app.post('/api/import', (req, res) => {
             } 
         });
     } catch (error) {
-        console.error('Import error:', error);
+        console.error('❌ Import error:', error);
         res.status(500).json({ error: 'Import failed: ' + error.message });
     }
 });
