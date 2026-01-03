@@ -1,15 +1,15 @@
 {
-  "name": "partnership-calculator-bot",
+  "name": "partnership-calculator",
   "version": "1.0.0",
-  "description": "Partnership Calculator Mini App with Admin Controls",
+  "description": "Partnership Calculator Bot",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
   }
 }

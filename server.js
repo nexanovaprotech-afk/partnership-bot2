@@ -57,7 +57,6 @@ function getRemainingDebt() {
     return Math.max(0, totalDebt - totalPaid);
 }
 
-// Calculate individual debt paid for each partner
 function calculateIndividualDebtPaid() {
     const totalDebt = getTotalDebt();
     if (totalDebt === 0) return { A: 0, B: 0, C: 0 };
@@ -71,12 +70,10 @@ function calculateIndividualDebtPaid() {
     };
 }
 
-// SMART CALCULATION: Handles debt completion
 function calculatePartnerDetails(amount) {
     const totalDebt = getTotalDebt();
     const remainingDebt = getRemainingDebt();
 
-    // Step 1: Divide by shareholding
     const shareA = amount * SHAREHOLDING.A;
     const shareB = amount * SHAREHOLDING.B;
     const shareC = amount * SHAREHOLDING.C;
@@ -85,9 +82,7 @@ function calculatePartnerDetails(amount) {
     let toPersonX, toSalary;
     let debtClearRate;
 
-    // SMART LOGIC: Check if debt is fully paid or will be paid
     if (remainingDebt <= 0) {
-        // NO MORE DEBT - 100% goes to salary
         debtA = debtB = debtC = 0;
         salaryA = shareA;
         salaryB = shareB;
@@ -96,7 +91,6 @@ function calculatePartnerDetails(amount) {
         toSalary = amount;
         debtClearRate = 0;
     } else if (remainingDebt < amount * 0.5) {
-        // LAST PAYMENT - Remaining debt < 50%
         debtClearRate = remainingDebt / totalDebt;
 
         debtA = INITIAL_DEBTS.A * debtClearRate;
@@ -110,7 +104,6 @@ function calculatePartnerDetails(amount) {
         salaryB = shareB - debtB;
         salaryC = shareC - debtC;
     } else {
-        // NORMAL 50/50 SPLIT
         debtClearRate = (amount * 0.5) / totalDebt;
 
         debtA = INITIAL_DEBTS.A * debtClearRate;
@@ -136,14 +129,12 @@ function calculatePartnerDetails(amount) {
     };
 }
 
-// Recalculate entire state from scratch (for edits/deletes)
 function recalculateState() {
     state.totalDebtPaid = 0;
     state.totalSalaryPaid = 0;
     state.totalExtraPayments = 0;
     state.extraPayments = { A: 0, B: 0, C: 0 };
 
-    // Recalculate all payments in order
     for (let payment of state.payments) {
         if (payment.type === 'regular') {
             const details = calculatePartnerDetails(payment.amount);
@@ -159,25 +150,19 @@ function recalculateState() {
         }
     }
 
-    // Check if debt is fully paid
     state.debtFullyPaid = getRemainingDebt() <= 0;
 }
 
-// Get monthly salary breakdown with DATE RANGE support
 function getMonthlyBreakdown(month, year) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
     const monthlyPayments = state.payments.filter(p => {
-        // Check if payment's date range overlaps with selected month
         if (p.paymentStartDate && p.paymentEndDate) {
             const pStart = new Date(p.paymentStartDate);
             const pEnd = new Date(p.paymentEndDate);
-
-            // Check if payment period overlaps with selected month
             return (pStart <= endDate && pEnd >= startDate);
         } else {
-            // Fallback to timestamp if no date range
             const paymentDate = new Date(p.timestamp);
             return paymentDate >= startDate && paymentDate <= endDate;
         }
@@ -204,16 +189,11 @@ function getMonthlyBreakdown(month, year) {
         totalAmount,
         debtPaid,
         totalSalary: totalAmount - debtPaid,
-        salaries: {
-            A: salaryA,
-            B: salaryB,
-            C: salaryC
-        },
+        salaries: { A: salaryA, B: salaryB, C: salaryC },
         payments: monthlyPayments
     };
 }
 
-// ACCESS CONTROL
 app.post('/api/access/request', (req, res) => {
     const { telegramId, userName } = req.body;
 
@@ -351,7 +331,6 @@ app.get('/api/history', (req, res) => {
     });
 });
 
-// MONTHLY REPORT
 app.get('/api/monthly', (req, res) => {
     const { telegramId, month, year } = req.query;
 
@@ -370,7 +349,6 @@ app.get('/api/monthly', (req, res) => {
     res.json(breakdown);
 });
 
-// POST: Record payment WITH DATE RANGE
 app.post('/api/payment', (req, res) => {
     const { amount, recordedBy, telegramId, comment, paymentStartDate, paymentEndDate } = req.body;
 
@@ -382,7 +360,6 @@ app.post('/api/payment', (req, res) => {
         return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    // Validate dates if provided
     if (paymentStartDate && paymentEndDate) {
         const startDate = new Date(paymentStartDate);
         const endDate = new Date(paymentEndDate);
@@ -427,7 +404,6 @@ app.post('/api/payment', (req, res) => {
     res.json({ success: true, state: { totalDebtPaid: state.totalDebtPaid, totalSalaryPaid: state.totalSalaryPaid, debtFullyPaid: state.debtFullyPaid } });
 });
 
-// EDIT PAYMENT WITH DATE RANGE
 app.put('/api/payment/:id', (req, res) => {
     const { id } = req.params;
     const { amount, comment, telegramId, paymentStartDate, paymentEndDate } = req.body;
@@ -442,7 +418,6 @@ app.put('/api/payment/:id', (req, res) => {
         return res.status(404).json({ error: 'Payment not found' });
     }
 
-    // Validate dates if provided
     if (paymentStartDate && paymentEndDate) {
         const startDate = new Date(paymentStartDate);
         const endDate = new Date(paymentEndDate);
@@ -475,7 +450,6 @@ app.put('/api/payment/:id', (req, res) => {
     }
 });
 
-// POST: Extra payment
 app.post('/api/extra-payment', (req, res) => {
     const { partner, amount, recordedBy, telegramId, comment } = req.body;
 
@@ -522,7 +496,6 @@ app.post('/api/extra-payment', (req, res) => {
     res.json({ success: true, extraPayments: state.extraPayments, totalExtraPayments: state.totalExtraPayments });
 });
 
-// DELETE payment
 app.delete('/api/payment/:id', (req, res) => {
     const { id } = req.params;
     const { telegramId } = req.body;
@@ -582,13 +555,6 @@ app.post('/api/admin/reset', (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-    console.log('🚀 Partnership Calculator Server (FIXED VERSION)');
-    console.log('✅ Features:');
-    console.log('   • Smart debt completion');
-    console.log('   • Editable entries');
-    console.log('   • Private access with approval');
-    console.log('   • Monthly salary tracking');
-    console.log('   • Payment date range support');
-    console.log('   • New debt entries (FIXED)');
-    console.log('   • Comments support');
+    console.log('🚀 Partnership Calculator Server');
+    console.log('✅ All features working!');
 });
