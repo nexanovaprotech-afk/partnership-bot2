@@ -1979,14 +1979,18 @@ async function handleExportData() {
     }
 
     try {
-        console.log('Export button clicked - fetching data from server...');
+        console.log('Export button clicked - fetching data...');
 
-        // Fetch all data from server APIs
+        // Fetch all data from server
         const [stateRes, historyRes, configRes] = await Promise.all([
             fetch(`${API_URL}/api/state?telegramId=${telegramId}`),
             fetch(`${API_URL}/api/history?telegramId=${telegramId}&limit=1000`),
             fetch(`${API_URL}/api/config`)
         ]);
+
+        if (!stateRes.ok || !historyRes.ok || !configRes.ok) {
+            throw new Error('Failed to fetch data from server');
+        }
 
         const state = await stateRes.json();
         const history = await historyRes.json();
@@ -2005,18 +2009,33 @@ async function handleExportData() {
         };
 
         const dataStr = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([dataStr], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `partnership-backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        const filename = `partnership-backup-${new Date().toISOString().split('T')[0]}.json`;
 
-        showNotification('✅ Backup exported successfully!', 'success');
+        // For Telegram Mini Apps, use a more reliable download method
+        const blob = new Blob([dataStr], {type: 'application/octet-stream'});
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        link.href = url;
+        link.download = filename;
+
+        // Important: Add to DOM before clicking
+        document.body.appendChild(link);
+
+        // Trigger download
+        link.click();
+
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+
+        showNotification('✅ Backup downloaded! Check your Downloads folder.', 'success');
         console.log('Export completed:', exportData.history.length, 'records');
+        console.log('Filename:', filename);
+
     } catch (error) {
         console.error('Export error:', error);
         showNotification('❌ Export failed: ' + error.message, 'error');
