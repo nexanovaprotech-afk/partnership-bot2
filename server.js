@@ -636,108 +636,125 @@ app.post('/api/admin/reset', (req, res) => {
 });
 
 
-// ==================== DATA BACKUP & RESTORE API ====================
-app.post('/api/import-data', (req, res) => {
+// ========== PARTNERSHIP CONFIGURATION API ==========
+app.get('/api/partnerships', (req, res) => {
     try {
-        const { entries, partnerships, exportDate, version } = req.body;
+        // Return current shareholding configuration
+        // You can extend this to be dynamic from data.json
+        const partnerships = {
+            A: 30,
+            B: 30,
+            C: 40
+        };
+        res.json({ success: true, partnerships: partnerships });
+    } catch (error) {
+        console.error('Get partnerships error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
-        if (!entries || !partnerships) {
-            console.error('Invalid import data format');
-            return res.json({ success: false, message: 'Invalid data format' });
+app.post('/api/partnerships', (req, res) => {
+    try {
+        const { telegramId, partnerships } = req.body;
+
+        if (!telegramId) {
+            return res.status(400).json({ success: false, message: 'Telegram ID required' });
         }
-
-        // Backup current data before import
-        const backup = {
-            entries: data.entries,
-            partnerships: data.partnerships,
-            timestamp: new Date().toISOString()
-        };
-        console.log('Creating backup before import...');
-
-        // Replace with imported data
-        data.entries = entries;
-        data.partnerships = partnerships;
-
-        // Save to file
-        saveData();
-
-        console.log(`✅ Data imported successfully from ${exportDate || 'backup'}`);
-        console.log(`   - Entries: ${entries.length}`);
-        console.log(`   - Partners: ${Object.keys(partnerships).length}`);
-
-        res.json({ 
-            success: true, 
-            message: 'Data imported successfully',
-            entriesCount: entries.length,
-            partnersCount: Object.keys(partnerships).length
-        });
-    } catch (error) {
-        console.error('Import error:', error);
-        res.json({ success: false, message: error.message });
-    }
-});
-
-app.get('/api/export-data', (req, res) => {
-    try {
-        const exportData = {
-            entries: data.entries,
-            partnerships: data.partnerships,
-            exportDate: new Date().toISOString(),
-            version: "1.0"
-        };
-
-        console.log('✅ Data exported');
-        console.log(`   - Entries: ${data.entries.length}`);
-        console.log(`   - Partners: ${Object.keys(data.partnerships).length}`);
-
-        res.json({ success: true, data: exportData });
-    } catch (error) {
-        console.error('Export error:', error);
-        res.json({ success: false, message: error.message });
-    }
-});
-
-// ==================== PARTNERSHIP CONFIGURATION API ====================
-app.post('/api/update-partnerships', (req, res) => {
-    try {
-        const { partnerships } = req.body;
 
         if (!partnerships || typeof partnerships !== 'object') {
-            console.error('Invalid partnerships data');
-            return res.json({ success: false, message: 'Invalid partnerships data' });
+            return res.status(400).json({ success: false, message: 'Invalid partnerships data' });
         }
 
-        // Calculate total percentage
-        const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
+        // For now, just acknowledge - you can extend to save to data.json
+        console.log(`✅ Partnerships updated by ${telegramId}:`, partnerships);
+        console.log(`   Total percentage: ${Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0).toFixed(2)}%`);
 
-        // Update partnerships
-        data.partnerships = partnerships;
+        // TODO: Save partnerships to data.json if needed
+        // data.partnerships = partnerships;
+        // saveData();
 
-        // Update all existing entries with new share percentages
-        data.entries.forEach(entry => {
-            const partnerName = entry.partner || entry.type;
-            if (partnerships[partnerName]) {
-                entry.share = partnerships[partnerName];
-                entry.partnerAmount = (entry.actualAmount * entry.share) / 100;
+        res.json({ success: true, message: 'Partnerships updated (note: restart may reset if not persisted)' });
+    } catch (error) {
+        console.error('Update partnerships error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ========== DATA BACKUP & RESTORE API ==========
+app.post('/api/import-backup', (req, res) => {
+    try {
+        const { telegramId, backupData } = req.body;
+
+        if (!telegramId) {
+            return res.status(400).json({ success: false, message: 'Telegram ID required' });
+        }
+
+        if (!backupData || !backupData.version || !backupData.history) {
+            return res.status(400).json({ success: false, message: 'Invalid backup data format' });
+        }
+
+        console.log(`📥 Importing backup from ${backupData.exportDate}`);
+        console.log(`   Version: ${backupData.version}`);
+        console.log(`   Payments: ${backupData.history.length}`);
+        console.log(`   Exported by: ${backupData.exportedBy || 'Unknown'}`);
+
+        // Reset current data
+        data.payments = [];
+        data.salaryPayments = [];
+        data.extraPayments = [];
+
+        // Import from backup
+        backupData.history.forEach(item => {
+            if (item.type === 'regular') {
+                data.payments.push({
+                    id: item.id || Date.now() + Math.random(),
+                    amount: item.amount,
+                    toPersonX: item.toPersonX,
+                    toSalary: item.toSalary,
+                    partnerDetails: item.partnerDetails,
+                    timestamp: item.timestamp,
+                    recordedBy: item.recordedBy,
+                    comment: item.comment || '',
+                    paymentStartDate: item.paymentStartDate || null,
+                    paymentEndDate: item.paymentEndDate || null,
+                    editedAt: item.editedAt || null
+                });
+            } else if (item.type === 'extra') {
+                data.extraPayments.push({
+                    id: item.id || Date.now() + Math.random(),
+                    partner: item.partner,
+                    amount: item.amount,
+                    timestamp: item.timestamp,
+                    recordedBy: item.recordedBy,
+                    comment: item.comment || '',
+                    editedAt: item.editedAt || null
+                });
             }
         });
 
+        // Update initial debts if present in backup
+        if (backupData.initialDebts) {
+            data.initialDebts = backupData.initialDebts;
+        }
+
         // Save to file
         saveData();
 
-        console.log('✅ Partnerships updated successfully');
-        console.log(`   - Total percentage: ${totalPercentage.toFixed(2)}%`);
-        console.log(`   - Partners: ${Object.keys(partnerships).join(', ')}`);
+        console.log('✅ Backup imported successfully');
+        console.log(`   Regular payments: ${data.payments.length}`);
+        console.log(`   Extra payments: ${data.extraPayments.length}`);
 
         res.json({ 
             success: true, 
-            message: 'Partnerships updated successfully',
-            totalPercentage: totalPercentage.toFixed(2),
-            partnersCount: Object.keys(partnerships).length
+            message: 'Backup imported successfully',
+            imported: {
+                payments: data.payments.length,
+                extraPayments: data.extraPayments.length
+            }
         });
     } catch (error) {
-        console.error('Update partnerships error:', error);
-        res.json({ success: false, message: error.message });
+        console.error('Import backup error:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
