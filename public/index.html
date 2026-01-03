@@ -6,202 +6,498 @@
     <title>Partnership Calculator</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--tg-theme-bg-color, #f5f5f5);
-            color: var(--tg-theme-text-color, #333);
-            padding: 16px;
-            padding-bottom: 80px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .container { max-width: 600px; margin: 0 auto; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+
         .header {
             text-align: center;
-            margin-bottom: 24px;
-            padding: 16px;
-            background: var(--tg-theme-secondary-bg-color, white);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            color: white;
         }
-        .header h1 { font-size: 24px; margin-bottom: 8px; }
-        .section {
-            background: var(--tg-theme-secondary-bg-color, white);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
+
+        .debt-summary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .debt-amount {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
         .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
         .btn {
             width: 100%;
-            padding: 14px;
+            padding: 15px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
         }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-shadow: 0 4px 15px rgba(102,126,234,0.4);
         }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(17,153,142,0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245,87,108,0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255,107,107,0.4);
+        }
+
         .btn-secondary {
-            background: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, white);
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
         }
-        .btn-success { background: #10b981; color: white; }
-        .btn-warning { background: #f59e0b; color: white; }
-        .btn-danger { background: #ef4444; color: white; }
-        .hidden { display: none !important; }
-        .form-group { margin-bottom: 16px; }
-        .form-label {
-            display: block;
+
+        .partners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .partner-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .partner-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .partner-details {
             font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 6px;
+            opacity: 0.9;
+            margin: 5px 0;
         }
-        .form-input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--tg-theme-hint-color, #ddd);
-            border-radius: 8px;
-            font-size: 16px;
-            background: var(--tg-theme-bg-color, white);
-            color: var(--tg-theme-text-color, #333);
+
+        .debt-status {
+            margin-top: 20px;
         }
+
+        .debt-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .debt-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .debt-item-name {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .debt-item-details {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #11998e;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .history-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #11998e;
+        }
+
+        .history-date {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .history-details {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+        }
+
+        .admin-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        /* Partner Management Styles */
         .partner-config-item {
-            padding: 12px;
-            background: var(--tg-theme-bg-color, #f5f5f5);
-            border-radius: 8px;
-            margin-bottom: 12px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
         }
+
         .partner-config-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 15px;
         }
-        .partner-id {
-            font-weight: 700;
+
+        .partner-id-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
             font-size: 18px;
-            color: #667eea;
         }
-        .btn-remove {
-            padding: 6px 12px;
-            font-size: 12px;
-            background: #ef4444;
+
+        .btn-remove-partner {
+            background: #ff6b6b;
             color: white;
             border: none;
-            border-radius: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 600;
         }
-        .stat-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+
+        .share-total-indicator {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: bold;
+            font-size: 18px;
         }
-        .stat-card {
-            padding: 12px;
-            background: var(--tg-theme-bg-color, #f5f5f5);
-            border-radius: 8px;
+
+        .share-valid {
+            background: #d4edda;
+            color: #155724;
         }
-        .stat-label {
-            font-size: 12px;
-            color: var(--tg-theme-hint-color, #999);
-            margin-bottom: 4px;
+
+        .share-invalid {
+            background: #f8d7da;
+            color: #721c24;
         }
-        .stat-value {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--tg-theme-text-color, #333);
-        }
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 14px;
-        }
-        .alert-success {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #10b981;
-        }
-        .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #ef4444;
-        }
-        .alert-info {
-            background: #dbeafe;
-            color: #1e40af;
-            border: 1px solid #3b82f6;
-        }
-        .history-item {
-            padding: 12px;
-            border-radius: 8px;
-            background: var(--tg-theme-bg-color, #f5f5f5);
-            margin-bottom: 8px;
-        }
-        .admin-section {
-            border: 2px solid #667eea;
+
+        @media (max-width: 600px) {
+            .partners-grid, .admin-actions {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Access Screen -->
-        <div id="accessScreen" class="hidden">
-            <div class="section">
-                <h2 style="text-align:center">🔐 Access Required</h2>
-                <p id="accessMessage" style="text-align:center;margin:16px 0">Requesting access...</p>
-                <button class="btn btn-primary" onclick="requestAccess()">Request Access</button>
-            </div>
+        <!-- Header -->
+        <div class="header">
+            <h1>💼 Partnership Calculator</h1>
+            <p id="userInfo"></p>
         </div>
 
-        <!-- Admin Login -->
-        <div id="adminLoginScreen" class="hidden">
-            <div class="section">
-                <h2 style="text-align:center">🔑 Admin Setup</h2>
-                <p style="text-align:center;margin:16px 0">Set up admin access</p>
-                <div class="form-group">
-                    <input type="password" id="adminPassword" class="form-input" placeholder="Enter admin password">
-                </div>
-                <button class="btn btn-primary" onclick="adminLogin()">Set as Admin</button>
+        <!-- Admin Login Section -->
+        <div id="adminLoginSection" class="card hidden">
+            <div class="section-title">🔑 Admin Setup</div>
+            <p style="margin-bottom: 20px; color: #666;">Set up admin access with password</p>
+            <div class="form-group">
+                <input type="password" id="adminPassword" class="form-input" placeholder="Enter admin password">
             </div>
+            <button class="btn btn-primary" onclick="adminLogin()">Set as Admin</button>
         </div>
+
+        <!-- Access Denied Section -->
+        <div id="accessDeniedSection" class="card hidden">
+            <div class="section-title">🔐 Access Required</div>
+            <p id="accessMessage" style="margin: 20px 0; text-align: center;">Requesting access...</p>
+            <button class="btn btn-primary" onclick="requestAccess()">Request Access</button>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer"></div>
 
         <!-- Main App -->
-        <div id="mainApp" class="hidden">
-            <div class="header">
-                <h1>💼 Partnership Calculator</h1>
-                <p id="userInfo"></p>
+        <div id="app" class="hidden">
+            <!-- Debt Summary -->
+            <div class="card">
+                <div class="debt-summary">
+                    <div class="section-title" style="color: white; justify-content: center;">⚠️ Total Remaining Debt for Person X</div>
+                    <div class="debt-amount" id="remainingDebt">₹0</div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Debt Paid to X</div>
+                            <div class="stat-value" id="totalDebtPaid">₹0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Salary Paid</div>
+                            <div class="stat-value" id="totalSalaryPaid">₹0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Extra Payments</div>
+                            <div class="stat-value" id="totalExtraPayments">₹0</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div id="alertContainer"></div>
-
-            <!-- Admin Controls -->
-            <div id="adminControls" class="hidden section admin-section">
-                <div class="section-title">⚙️ Admin Controls</div>
-                <button class="btn btn-secondary" onclick="togglePartnerConfig()">👥 Manage Partners</button>
-                <button class="btn btn-primary" onclick="togglePaymentForm()">💰 Record Payment</button>
-                <button class="btn btn-warning" onclick="toggleExtraPaymentForm()">💵 Extra Payment</button>
-                <button class="btn btn-danger" onclick="toggleNewDebtForm()">🆕 Add New Debt</button>
-                <button class="btn btn-success" onclick="exportData()">📤 Export Backup</button>
-                <button class="btn btn-warning" onclick="importData()">📥 Import Backup</button>
+            <!-- Monthly Report Button -->
+            <div class="card">
+                <button class="btn btn-secondary" onclick="toggleMonthlyReport()">📅 Monthly Salary Report</button>
             </div>
 
-            <!-- Partner Configuration -->
-            <div id="partnerConfigSection" class="hidden section admin-section">
+            <!-- Monthly Report Section -->
+            <div id="monthlyReportSection" class="card hidden">
+                <div class="section-title">📅 Monthly Salary Report</div>
+                <div class="form-group">
+                    <label class="form-label">Select Month</label>
+                    <select id="monthSelect" class="form-select"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Select Year</label>
+                    <select id="yearSelect" class="form-select"></select>
+                </div>
+                <button class="btn btn-primary" onclick="generateMonthlyReport()">Generate Report</button>
+                <div id="monthlyReportContent" class="hidden" style="margin-top: 20px;"></div>
+            </div>
+
+            <!-- Payment Form -->
+            <div id="paymentFormSection" class="card hidden">
+                <form id="paymentForm">
+                    <div class="section-title">💰 Enter Payment Amount (₹)</div>
+                    <div class="form-group">
+                        <input type="number" id="paymentAmount" class="form-input" placeholder="Enter amount" step="0.01" required>
+                        <small style="color: #999;">50/50 Split</small>
+                    </div>
+
+                    <div class="section-title">📅 Payment Period (Optional)</div>
+                    <div class="form-group">
+                        <label class="form-label">From Date</label>
+                        <input type="date" id="paymentStartDate" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">To Date</label>
+                        <input type="date" id="paymentEndDate" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">💬 Comment/Remark (Optional)</label>
+                        <textarea id="paymentComment" class="form-textarea" placeholder="Add a note about this payment..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Submit Payment</button>
+                    <div id="previewSection" class="hidden" style="margin-top: 20px;"></div>
+                </form>
+            </div>
+
+            <!-- Extra Payment Section -->
+            <div id="extraPaymentSection" class="card hidden">
+                <div class="section-title">💳 Extra Payment (Reduces Partner's Debt)</div>
+                <div class="form-group">
+                    <label class="form-label">Select Partner</label>
+                    <select id="extraPartner" class="form-select">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount (₹)</label>
+                    <input type="number" id="extraAmount" class="form-input" placeholder="Enter extra payment amount" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">💬 Comment/Remark (Optional)</label>
+                    <textarea id="extraComment" class="form-textarea" placeholder="Reason for extra payment..."></textarea>
+                </div>
+                <button class="btn btn-warning" onclick="submitExtraPayment()">Submit Extra Payment</button>
+            </div>
+
+            <!-- New Debt Section -->
+            <div id="newDebtSection" class="card hidden">
+                <div class="section-title">🆕 Add New Debt (Separate from Initial Debt)</div>
+                <div class="form-group">
+                    <label class="form-label">Select Partner</label>
+                    <select id="debtPartner" class="form-select">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Debt Amount (₹)</label>
+                    <input type="number" id="debtAmount" class="form-input" placeholder="Enter new debt amount" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">💬 Comment/Remark (Optional)</label>
+                    <textarea id="debtComment" class="form-textarea" placeholder="Reason for new debt..."></textarea>
+                </div>
+                <button class="btn btn-danger" onclick="submitNewDebt()">Add New Debt</button>
+            </div>
+
+            <!-- Partner Configuration Section -->
+            <div id="partnerConfigSection" class="card hidden">
                 <div class="section-title">👥 Manage Partners</div>
+                <div id="shareTotal" class="share-total-indicator share-valid">Total Share: 100%</div>
                 <div id="partnerConfigList"></div>
                 <button class="btn btn-success" onclick="showAddPartnerForm()">➕ Add New Partner</button>
                 <button class="btn btn-primary" onclick="savePartnerConfig()">💾 Save Changes</button>
@@ -209,108 +505,62 @@
             </div>
 
             <!-- Add Partner Form -->
-            <div id="addPartnerForm" class="hidden">
+            <div id="addPartnerForm" class="card hidden">
+                <div class="section-title">➕ Add New Partner</div>
                 <div class="form-group">
-                    <label class="form-label">Partner ID (e.g., D, E)</label>
-                    <input type="text" id="newPartnerId" class="form-input" maxlength="5" placeholder="D">
+                    <label class="form-label">Partner ID (e.g., D, E, F)</label>
+                    <input type="text" id="newPartnerId" class="form-input" maxlength="5" placeholder="Enter partner ID">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Partner Name</label>
-                    <input type="text" id="newPartnerName" class="form-input" placeholder="Enter name">
+                    <input type="text" id="newPartnerName" class="form-input" placeholder="Enter partner name">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Initial Debt (₹)</label>
-                    <input type="number" id="newPartnerDebt" class="form-input" placeholder="0">
+                    <input type="number" id="newPartnerDebt" class="form-input" placeholder="0" step="0.01">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Share (%) - Will be auto-adjusted</label>
+                    <label class="form-label">Share (%)</label>
                     <input type="number" id="newPartnerShare" class="form-input" step="0.01" placeholder="0">
+                    <small style="color: #999;">Will be validated to ensure total = 100%</small>
                 </div>
                 <button class="btn btn-success" onclick="addPartner()">✅ Add Partner</button>
                 <button class="btn btn-secondary" onclick="cancelAddPartner()">❌ Cancel</button>
             </div>
 
-            <!-- State Display -->
-            <div class="section">
-                <div class="section-title">📊 Current State</div>
-                <div class="stat-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Remaining Debt</div>
-                        <div class="stat-value" id="remainingDebt">₹0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Total Debt Paid</div>
-                        <div class="stat-value" id="totalDebtPaid">₹0</div>
-                    </div>
-                </div>
+            <!-- Partners Distribution -->
+            <div class="card">
+                <div class="section-title">👥 Partner Distribution</div>
+                <div class="partners-grid" id="partnersGrid"></div>
             </div>
 
-            <!-- Partners Display -->
-            <div class="section">
-                <div class="section-title">👥 Partners</div>
-                <div id="partnersDisplay"></div>
+            <!-- Debt Status -->
+            <div class="card">
+                <div class="section-title">💰 Debt Status</div>
+                <div class="debt-status" id="debtStatus"></div>
             </div>
 
-            <!-- Payment Form -->
-            <div id="paymentForm" class="hidden section admin-section">
-                <div class="section-title">💰 Record Payment</div>
-                <div class="form-group">
-                    <label class="form-label">Amount (₹)</label>
-                    <input type="number" id="paymentAmount" class="form-input" placeholder="Enter amount">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Comment (Optional)</label>
-                    <textarea id="paymentComment" class="form-input" placeholder="Add a note..."></textarea>
-                </div>
-                <button class="btn btn-primary" onclick="submitPayment()">✅ Submit Payment</button>
-                <button class="btn btn-secondary" onclick="togglePaymentForm()">❌ Cancel</button>
+            <!-- Payment History -->
+            <div class="card" id="historySection">
+                <div class="section-title">📅 Payment History</div>
+                <div id="historyContent"></div>
             </div>
 
-            <!-- Extra Payment Form -->
-            <div id="extraPaymentForm" class="hidden section admin-section">
-                <div class="section-title">💵 Extra Payment</div>
-                <div class="form-group">
-                    <label class="form-label">Partner</label>
-                    <select id="extraPartner" class="form-input"></select>
+            <!-- Admin Controls -->
+            <div id="adminControls" class="card hidden">
+                <div class="section-title">⚙️ Admin Controls</div>
+                <div class="admin-actions">
+                    <button class="btn btn-success" onclick="togglePaymentForm()">💰 Record Payment</button>
+                    <button class="btn btn-warning" onclick="toggleExtraPayment()">💳 Extra Payment</button>
+                    <button class="btn btn-danger" onclick="toggleNewDebt()">🆕 Add New Debt</button>
+                    <button class="btn btn-primary" onclick="togglePartnerConfig()">👥 Manage Partners</button>
+                    <button class="btn btn-success" onclick="exportData()">📤 Export Backup</button>
+                    <button class="btn btn-warning" onclick="importData()">📥 Import Backup</button>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Amount (₹)</label>
-                    <input type="number" id="extraAmount" class="form-input" placeholder="Enter amount">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Comment (Optional)</label>
-                    <textarea id="extraComment" class="form-input" placeholder="Add a note..."></textarea>
-                </div>
-                <button class="btn btn-primary" onclick="submitExtraPayment()">✅ Submit</button>
-                <button class="btn btn-secondary" onclick="toggleExtraPaymentForm()">❌ Cancel</button>
-            </div>
-
-            <!-- New Debt Form -->
-            <div id="newDebtForm" class="hidden section admin-section">
-                <div class="section-title">🆕 Add New Debt</div>
-                <div class="form-group">
-                    <label class="form-label">Partner</label>
-                    <select id="debtPartner" class="form-input"></select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Debt Amount (₹)</label>
-                    <input type="number" id="debtAmount" class="form-input" placeholder="Enter debt amount">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Comment (Optional)</label>
-                    <textarea id="debtComment" class="form-input" placeholder="Reason for debt..."></textarea>
-                </div>
-                <button class="btn btn-danger" onclick="submitNewDebt()">✅ Add Debt</button>
-                <button class="btn btn-secondary" onclick="toggleNewDebtForm()">❌ Cancel</button>
-            </div>
-
-            <!-- History -->
-            <div class="section">
-                <div class="section-title">📜 Payment History</div>
-                <div id="historyContainer">Loading...</div>
             </div>
         </div>
     </div>
+
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
@@ -320,7 +570,9 @@
         let userName = 'User';
         let isAdmin = false;
         let partners = {};
+        let currentState = {};
 
+        // Initialize
         async function init() {
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 telegramId = tg.initDataUnsafe.user.id;
@@ -332,32 +584,38 @@
 
             document.getElementById('userInfo').textContent = `Welcome, ${userName}!`;
             await checkAdminStatus();
+            populateMonthYearSelects();
         }
 
+        // Check Admin Status
         async function checkAdminStatus() {
             try {
                 const response = await fetch(`${API_URL}/api/admin/check?telegramId=${telegramId}`);
                 const data = await response.json();
 
                 if (!data.hasAdmin) {
-                    document.getElementById('adminLoginScreen').classList.remove('hidden');
+                    showSection('adminLoginSection');
                 } else if (data.isAdmin) {
                     isAdmin = true;
-                    showMainApp();
+                    showSection('app');
+                    document.getElementById('adminControls').classList.remove('hidden');
+                    await loadState();
                 } else if (data.isApproved) {
-                    showMainApp();
+                    showSection('app');
+                    await loadState();
                 } else {
-                    showAccessScreen();
+                    showSection('accessDeniedSection');
                 }
             } catch (error) {
-                showAlert('Network error', 'error');
+                showAlert('Network error. Please check your connection.', 'danger');
             }
         }
 
+        // Admin Login
         async function adminLogin() {
             const password = document.getElementById('adminPassword').value;
             if (!password) {
-                showAlert('Please enter password', 'error');
+                showAlert('Please enter password', 'danger');
                 return;
             }
 
@@ -370,22 +628,19 @@
 
                 if (response.ok) {
                     isAdmin = true;
-                    showMainApp();
+                    showSection('app');
+                    document.getElementById('adminControls').classList.remove('hidden');
+                    await loadState();
                     showAlert('Admin access granted!', 'success');
                 } else {
-                    showAlert('Invalid password', 'error');
+                    showAlert('Invalid password', 'danger');
                 }
             } catch (error) {
-                showAlert('Network error', 'error');
+                showAlert('Network error', 'danger');
             }
         }
 
-        function showAccessScreen() {
-            document.getElementById('accessScreen').classList.remove('hidden');
-            document.getElementById('adminLoginScreen').classList.add('hidden');
-            document.getElementById('mainApp').classList.add('hidden');
-        }
-
+        // Request Access
         async function requestAccess() {
             try {
                 const response = await fetch(`${API_URL}/api/access/request`, {
@@ -396,113 +651,291 @@
 
                 const data = await response.json();
                 if (data.approved) {
-                    showMainApp();
+                    showSection('app');
+                    await loadState();
                 } else {
-                    document.getElementById('accessMessage').textContent = 'Request sent! Waiting for approval...';
-                    showAlert('Request sent to admin', 'info');
+                    document.getElementById('accessMessage').textContent = 'Request sent! Waiting for admin approval...';
+                    showAlert('Access request sent to admin', 'info');
                 }
             } catch (error) {
-                showAlert('Network error', 'error');
+                showAlert('Network error', 'danger');
             }
         }
 
-        function showMainApp() {
-            document.getElementById('accessScreen').classList.add('hidden');
-            document.getElementById('adminLoginScreen').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
-
-            if (isAdmin) {
-                document.getElementById('adminControls').classList.remove('hidden');
-            }
-
-            loadState();
-            loadHistory();
-        }
-
+        // Load State
         async function loadState() {
             try {
                 const response = await fetch(`${API_URL}/api/state?telegramId=${telegramId}`);
                 const data = await response.json();
 
-                partners = data.partners;
+                currentState = data;
+                partners = data.partners || {};
 
-                document.getElementById('remainingDebt').textContent = '₹' + data.remainingDebt.toLocaleString('en-IN');
-                document.getElementById('totalDebtPaid').textContent = '₹' + data.totalDebtPaid.toLocaleString('en-IN');
+                // Update debt summary
+                document.getElementById('remainingDebt').textContent = '₹' + formatNumber(data.remainingDebt);
+                document.getElementById('totalDebtPaid').textContent = '₹' + formatNumber(data.totalDebtPaid);
+                document.getElementById('totalSalaryPaid').textContent = '₹' + formatNumber(data.totalSalaryPaid);
+                document.getElementById('totalExtraPayments').textContent = '₹' + formatNumber(data.totalExtraPayments);
 
                 updatePartnersDisplay();
+                updateDebtStatus(data);
+                await loadHistory();
                 updatePartnerSelects();
             } catch (error) {
-                showAlert('Failed to load state', 'error');
+                showAlert('Failed to load data', 'danger');
             }
         }
 
+        // Update Partners Display
         function updatePartnersDisplay() {
-            const container = document.getElementById('partnersDisplay');
-            container.innerHTML = Object.keys(partners).map(key => {
+            const grid = document.getElementById('partnersGrid');
+            grid.innerHTML = Object.keys(partners).map(key => {
                 const partner = partners[key];
+                const debtPaid = currentState.debtPaid ? currentState.debtPaid[key] || 0 : 0;
+                const salaryReceived = calculatePartnerSalary(key);
+
                 return `
-                    <div class="stat-card" style="margin-bottom:8px">
-                        <div style="font-weight:600;font-size:16px;margin-bottom:4px">${partner.name} (${key})</div>
-                        <div style="font-size:12px;color:#999">Share: ${(partner.share * 100).toFixed(1)}% | Debt: ₹${partner.debt.toLocaleString('en-IN')}</div>
+                    <div class="partner-card">
+                        <div class="partner-name">👤 ${partner.name} (${key})</div>
+                        <div class="partner-details">${(partner.share * 100).toFixed(0)}%</div>
+                        <div class="partner-details">Share Amount: ₹<span id="share_${key}">0</span></div>
+                        <div class="partner-details">Debt Payment: ₹${formatNumber(debtPaid)}</div>
+                        <div class="partner-details">Salary Received: ₹${formatNumber(salaryReceived)}</div>
                     </div>
                 `;
             }).join('');
         }
 
-        function updatePartnerSelects() {
-            const selects = [document.getElementById('extraPartner'), document.getElementById('debtPartner')];
-            selects.forEach(select => {
-                select.innerHTML = Object.keys(partners).map(key => 
-                    `<option value="${key}">${partners[key].name} (${key})</option>`
-                ).join('');
-            });
+        // Update Debt Status
+        function updateDebtStatus(data) {
+            const container = document.getElementById('debtStatus');
+            container.innerHTML = Object.keys(partners).map(key => {
+                const partner = partners[key];
+                const debtPaid = data.debtPaid ? data.debtPaid[key] || 0 : 0;
+                const extraPaid = data.extraPayments ? data.extraPayments[key] || 0 : 0;
+                const remaining = Math.max(0, partner.debt - debtPaid - extraPaid);
+
+                return `
+                    <div class="debt-item">
+                        <div class="debt-item-header">
+                            <div class="debt-item-name">👤 ${partner.name} (${key})</div>
+                        </div>
+                        <div class="debt-item-details">Initial Debt: ₹${formatNumber(partner.debt)}</div>
+                        <div class="debt-item-details">Paid (Regular): ₹${formatNumber(debtPaid)}</div>
+                        <div class="debt-item-details">Extra Paid: ₹${formatNumber(extraPaid)}</div>
+                        <div class="debt-item-details" style="color: #f5576c; font-weight: bold;">Remaining: ₹${formatNumber(remaining)}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
+        // Calculate Partner Salary
+        function calculatePartnerSalary(partnerId) {
+            if (!currentState.payments) return 0;
+            return currentState.payments
+                .filter(p => p.type === 'regular' && p.partnerDetails && p.partnerDetails[partnerId])
+                .reduce((sum, p) => sum + (p.partnerDetails[partnerId].salary || 0), 0);
+        }
+
+        // Load History
         async function loadHistory() {
             try {
                 const response = await fetch(`${API_URL}/api/history?telegramId=${telegramId}&limit=50`);
                 const data = await response.json();
 
-                const container = document.getElementById('historyContainer');
+                const container = document.getElementById('historyContent');
 
-                if (data.history.length === 0) {
-                    container.innerHTML = '<p style="text-align:center;color:#999;">No payments yet</p>';
+                if (!data.history || data.history.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #999;">No payment history yet</p>';
                     return;
                 }
 
                 container.innerHTML = data.history.map(payment => {
-                    const date = new Date(payment.timestamp).toLocaleString('en-IN');
-                    const isExtra = payment.type === 'extra';
+                    const date = new Date(payment.timestamp).toLocaleDateString('en-IN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
 
                     let html = `<div class="history-item">
-                        <div style="display:flex;justify-content:space-between">
-                            <span style="font-weight:700;font-size:18px">₹${Math.abs(payment.amount).toLocaleString('en-IN')}</span>
-                            <span style="font-size:12px;color:#999">${date}</span>
+                        <div class="history-header">
+                            <div class="history-amount">₹${formatNumber(Math.abs(payment.amount))}</div>
+                            <div class="history-date">${date}</div>
                         </div>`;
 
-                    if (isExtra) {
+                    if (payment.type === 'extra') {
                         const partnerName = partners[payment.partner]?.name || payment.partner;
-                        html += `<div style="font-size:13px;margin-top:4px">${partnerName} - ${payment.amount < 0 ? 'New Debt' : 'Extra Payment'}</div>`;
+                        const label = payment.amount < 0 ? 'New Debt' : 'Extra Payment';
+                        html += `<div class="history-details">${partnerName} - ${label}</div>`;
                     } else {
-                        html += `<div style="font-size:13px;margin-top:4px">To Person X: ₹${payment.toPersonX.toLocaleString('en-IN')}</div>`;
+                        html += `<div class="history-details">To Person X: ₹${formatNumber(payment.toPersonX)}</div>`;
+                        html += `<div class="history-details">To Salary: ₹${formatNumber(payment.toSalary)}</div>`;
                     }
 
                     if (payment.comment) {
-                        html += `<div style="font-size:12px;font-style:italic;color:#999;margin-top:4px">💬 ${payment.comment}</div>`;
+                        html += `<div class="history-details" style="font-style: italic;">💬 ${payment.comment}</div>`;
+                    }
+
+                    if (payment.paymentStartDate && payment.paymentEndDate) {
+                        const startDate = new Date(payment.paymentStartDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+                        const endDate = new Date(payment.paymentEndDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+                        html += `<div class="history-details">📅 Period: ${startDate} - ${endDate}</div>`;
                     }
 
                     html += `</div>`;
                     return html;
                 }).join('');
             } catch (error) {
-                document.getElementById('historyContainer').innerHTML = '<p style="text-align:center;color:red;">Failed to load history</p>';
+                document.getElementById('historyContent').innerHTML = '<p style="text-align: center; color: #f5576c;">Failed to load history</p>';
             }
         }
 
+        // Payment Form Handling
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            const comment = document.getElementById('paymentComment').value;
+            const startDate = document.getElementById('paymentStartDate').value;
+            const endDate = document.getElementById('paymentEndDate').value;
+
+            if (!amount || amount <= 0) {
+                showAlert('Please enter a valid amount', 'danger');
+                return;
+            }
+
+            if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+                showAlert('Start date must be before end date', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount,
+                        recordedBy: userName,
+                        telegramId,
+                        comment,
+                        paymentStartDate: startDate || null,
+                        paymentEndDate: endDate || null
+                    })
+                });
+
+                if (response.ok) {
+                    showAlert('Payment recorded successfully!', 'success');
+                    document.getElementById('paymentForm').reset();
+                    togglePaymentForm();
+                    await loadState();
+                } else {
+                    showAlert('Failed to record payment', 'danger');
+                }
+            } catch (error) {
+                showAlert('Network error', 'danger');
+            }
+        });
+
+        // Preview calculation when amount changes
+        document.getElementById('paymentAmount').addEventListener('input', (e) => {
+            const amount = parseFloat(e.target.value);
+            if (amount && amount > 0) {
+                updatePaymentPreview(amount);
+            } else {
+                document.getElementById('previewSection').classList.add('hidden');
+            }
+        });
+
+        function updatePaymentPreview(amount) {
+            const preview = document.getElementById('previewSection');
+            preview.classList.remove('hidden');
+
+            let html = '<div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">';
+            html += '<div style="font-weight: bold; margin-bottom: 10px;">💡 Payment Preview</div>';
+
+            Object.keys(partners).forEach(key => {
+                const partner = partners[key];
+                const share = amount * partner.share;
+                html += `<div style="margin: 5px 0;">${partner.name}: ₹${formatNumber(share)}</div>`;
+                // Update live display
+                const shareElem = document.getElementById(`share_${key}`);
+                if (shareElem) shareElem.textContent = formatNumber(share);
+            });
+
+            html += '</div>';
+            preview.innerHTML = html;
+        }
+
+        // Extra Payment
+        async function submitExtraPayment() {
+            const partner = document.getElementById('extraPartner').value;
+            const amount = parseFloat(document.getElementById('extraAmount').value);
+            const comment = document.getElementById('extraComment').value;
+
+            if (!amount || amount <= 0) {
+                showAlert('Please enter a valid amount', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/extra-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ partner, amount, recordedBy: userName, telegramId, comment })
+                });
+
+                if (response.ok) {
+                    showAlert('Extra payment recorded!', 'success');
+                    document.getElementById('extraAmount').value = '';
+                    document.getElementById('extraComment').value = '';
+                    toggleExtraPayment();
+                    await loadState();
+                } else {
+                    showAlert('Failed to record extra payment', 'danger');
+                }
+            } catch (error) {
+                showAlert('Network error', 'danger');
+            }
+        }
+
+        // New Debt
+        async function submitNewDebt() {
+            const partner = document.getElementById('debtPartner').value;
+            const amount = parseFloat(document.getElementById('debtAmount').value);
+            const comment = document.getElementById('debtComment').value;
+
+            if (!amount || amount <= 0) {
+                showAlert('Please enter a valid debt amount', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/extra-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ partner, amount: -amount, recordedBy: userName, telegramId, comment })
+                });
+
+                if (response.ok) {
+                    showAlert('New debt added!', 'success');
+                    document.getElementById('debtAmount').value = '';
+                    document.getElementById('debtComment').value = '';
+                    toggleNewDebt();
+                    await loadState();
+                } else {
+                    showAlert('Failed to add debt', 'danger');
+                }
+            } catch (error) {
+                showAlert('Network error', 'danger');
+            }
+        }
+
+        // Partner Management
         function togglePartnerConfig() {
             const section = document.getElementById('partnerConfigSection');
             section.classList.toggle('hidden');
-
             if (!section.classList.contains('hidden')) {
                 renderPartnerConfig();
             }
@@ -515,8 +948,8 @@
                 return `
                     <div class="partner-config-item">
                         <div class="partner-config-header">
-                            <span class="partner-id">${key}</span>
-                            <button class="btn-remove" onclick="removePartner('${key}')">Remove</button>
+                            <div class="partner-id-badge">${key}</div>
+                            <button class="btn-remove-partner" onclick="removePartner('${key}')">Remove</button>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Name</label>
@@ -524,15 +957,32 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Initial Debt (₹)</label>
-                            <input type="number" class="form-input" id="partner_debt_${key}" value="${partner.debt}">
+                            <input type="number" class="form-input" id="partner_debt_${key}" value="${partner.debt}" step="0.01">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Share (%)</label>
-                            <input type="number" class="form-input" id="partner_share_${key}" step="0.01" value="${(partner.share * 100).toFixed(2)}">
+                            <input type="number" class="form-input partner-share-input" id="partner_share_${key}" value="${(partner.share * 100).toFixed(2)}" step="0.01" onchange="updateShareTotal()">
                         </div>
                     </div>
                 `;
             }).join('');
+            updateShareTotal();
+        }
+
+        function updateShareTotal() {
+            let total = 0;
+            document.querySelectorAll('.partner-share-input').forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+
+            const indicator = document.getElementById('shareTotal');
+            indicator.textContent = `Total Share: ${total.toFixed(2)}%`;
+
+            if (Math.abs(total - 100) < 0.01) {
+                indicator.className = 'share-total-indicator share-valid';
+            } else {
+                indicator.className = 'share-total-indicator share-invalid';
+            }
         }
 
         function showAddPartnerForm() {
@@ -554,12 +1004,12 @@
             const share = parseFloat(document.getElementById('newPartnerShare').value) / 100 || 0;
 
             if (!id || !name) {
-                showAlert('Please enter partner ID and name', 'error');
+                showAlert('Please enter partner ID and name', 'danger');
                 return;
             }
 
             if (partners[id]) {
-                showAlert('Partner ID already exists', 'error');
+                showAlert('Partner ID already exists', 'danger');
                 return;
             }
 
@@ -570,7 +1020,7 @@
         }
 
         function removePartner(key) {
-            if (!confirm(`Remove partner ${partners[key].name}?`)) return;
+            if (!confirm(`Remove partner ${partners[key].name}? This cannot be undone.`)) return;
             delete partners[key];
             renderPartnerConfig();
             showAlert('Partner removed! Remember to save changes', 'info');
@@ -590,7 +1040,7 @@
             }
 
             if (Math.abs(totalShare - 1.0) > 0.01) {
-                showAlert(`Total share must be 100%! Current: ${(totalShare * 100).toFixed(1)}%`, 'error');
+                showAlert(`Total share must be 100%! Current: ${(totalShare * 100).toFixed(1)}%`, 'danger');
                 return;
             }
 
@@ -607,123 +1057,17 @@
                     togglePartnerConfig();
                 } else {
                     const error = await response.json();
-                    showAlert('Failed: ' + error.error, 'error');
+                    showAlert('Failed: ' + error.error, 'danger');
                 }
             } catch (error) {
-                showAlert('Network error', 'error');
+                showAlert('Network error', 'danger');
             }
         }
 
-        function togglePaymentForm() {
-            document.getElementById('paymentForm').classList.toggle('hidden');
-        }
-
-        async function submitPayment() {
-            const amount = document.getElementById('paymentAmount').value;
-            const comment = document.getElementById('paymentComment').value;
-
-            if (!amount || amount <= 0) {
-                showAlert('Please enter valid amount', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/api/payment`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount: parseFloat(amount), recordedBy: userName, telegramId, comment })
-                });
-
-                if (response.ok) {
-                    showAlert('Payment recorded!', 'success');
-                    togglePaymentForm();
-                    document.getElementById('paymentAmount').value = '';
-                    document.getElementById('paymentComment').value = '';
-                    await loadState();
-                    await loadHistory();
-                } else {
-                    showAlert('Failed to record payment', 'error');
-                }
-            } catch (error) {
-                showAlert('Network error', 'error');
-            }
-        }
-
-        function toggleExtraPaymentForm() {
-            document.getElementById('extraPaymentForm').classList.toggle('hidden');
-        }
-
-        async function submitExtraPayment() {
-            const partner = document.getElementById('extraPartner').value;
-            const amount = document.getElementById('extraAmount').value;
-            const comment = document.getElementById('extraComment').value;
-
-            if (!amount) {
-                showAlert('Please enter amount', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/api/extra-payment`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ partner, amount: parseFloat(amount), recordedBy: userName, telegramId, comment })
-                });
-
-                if (response.ok) {
-                    showAlert('Extra payment recorded!', 'success');
-                    toggleExtraPaymentForm();
-                    document.getElementById('extraAmount').value = '';
-                    document.getElementById('extraComment').value = '';
-                    await loadState();
-                    await loadHistory();
-                } else {
-                    showAlert('Failed', 'error');
-                }
-            } catch (error) {
-                showAlert('Network error', 'error');
-            }
-        }
-
-        function toggleNewDebtForm() {
-            document.getElementById('newDebtForm').classList.toggle('hidden');
-        }
-
-        async function submitNewDebt() {
-            const partner = document.getElementById('debtPartner').value;
-            const amount = document.getElementById('debtAmount').value;
-            const comment = document.getElementById('debtComment').value;
-
-            if (!amount || amount <= 0) {
-                showAlert('Please enter valid debt amount', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/api/extra-payment`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ partner, amount: -parseFloat(amount), recordedBy: userName, telegramId, comment })
-                });
-
-                if (response.ok) {
-                    showAlert('New debt added!', 'success');
-                    toggleNewDebtForm();
-                    document.getElementById('debtAmount').value = '';
-                    document.getElementById('debtComment').value = '';
-                    await loadState();
-                    await loadHistory();
-                } else {
-                    showAlert('Failed', 'error');
-                }
-            } catch (error) {
-                showAlert('Network error', 'error');
-            }
-        }
-
+        // Export Data
         async function exportData() {
             if (!isAdmin) {
-                showAlert('⛔ Admin access required', 'error');
+                showAlert('Admin access required', 'danger');
                 return;
             }
 
@@ -743,16 +1087,17 @@
 
                     showAlert('✅ Data exported successfully!', 'success');
                 } else {
-                    showAlert('❌ Export failed', 'error');
+                    showAlert('Export failed', 'danger');
                 }
             } catch (error) {
-                showAlert('❌ Network error', 'error');
+                showAlert('Network error', 'danger');
             }
         }
 
+        // Import Data
         async function importData() {
             if (!isAdmin) {
-                showAlert('⛔ Admin access required', 'error');
+                showAlert('Admin access required', 'danger');
                 return;
             }
 
@@ -771,6 +1116,8 @@
                     const confirmed = confirm(
                         '⚠️ IMPORT WARNING:\n\n' +
                         'This will replace ALL current data with backup data.\n\n' +
+                        'Partners: ' + Object.keys(data.partners || {}).length + '\n' +
+                        'Payments: ' + (data.state?.payments?.length || 0) + '\n\n' +
                         'Continue?'
                     );
 
@@ -786,32 +1133,139 @@
                         const result = await response.json();
                         showAlert(`✅ Imported: ${result.imported.partners} partners, ${result.imported.payments} payments`, 'success');
                         await loadState();
-                        await loadHistory();
                     } else {
                         const error = await response.json();
-                        showAlert('❌ Import failed: ' + error.error, 'error');
+                        showAlert('Import failed: ' + error.error, 'danger');
                     }
                 } catch (error) {
-                    showAlert('❌ Invalid backup file', 'error');
+                    showAlert('Invalid backup file: ' + error.message, 'danger');
                 }
             };
 
             input.click();
         }
 
-        function showAlert(message, type) {
-            const container = document.getElementById('alertContainer');
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
+        // Monthly Report
+        function populateMonthYearSelects() {
+            const monthSelect = document.getElementById('monthSelect');
+            const yearSelect = document.getElementById('yearSelect');
 
-            container.appendChild(alertDiv);
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
 
-            setTimeout(() => {
-                alertDiv.remove();
-            }, 3000);
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
+
+            months.forEach((month, index) => {
+                const option = document.createElement('option');
+                option.value = index + 1;
+                option.textContent = month;
+                if (index === currentMonth) option.selected = true;
+                monthSelect.appendChild(option);
+            });
+
+            for (let year = currentYear; year >= currentYear - 5; year--) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (year === currentYear) option.selected = true;
+                yearSelect.appendChild(option);
+            }
         }
 
+        async function generateMonthlyReport() {
+            const month = document.getElementById('monthSelect').value;
+            const year = document.getElementById('yearSelect').value;
+
+            try {
+                const response = await fetch(`${API_URL}/api/monthly?telegramId=${telegramId}&month=${month}&year=${year}`);
+                const data = await response.json();
+
+                const content = document.getElementById('monthlyReportContent');
+                content.classList.remove('hidden');
+
+                let html = '<div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">';
+                html += `<h3 style="margin-bottom: 15px;">📊 Report for ${getMonthName(month)} ${year}</h3>`;
+                html += `<div style="margin: 10px 0;"><strong>Total Payments:</strong> ${data.totalPayments}</div>`;
+                html += `<div style="margin: 10px 0;"><strong>Total Amount:</strong> ₹${formatNumber(data.totalAmount)}</div>`;
+                html += `<div style="margin: 10px 0;"><strong>Debt Paid:</strong> ₹${formatNumber(data.debtPaid)}</div>`;
+                html += `<div style="margin: 10px 0;"><strong>Total Salary:</strong> ₹${formatNumber(data.totalSalary)}</div>`;
+
+                html += '<h4 style="margin-top: 20px; margin-bottom: 10px;">Partner Salaries:</h4>';
+                Object.keys(partners).forEach(key => {
+                    const salary = data.salaries[key] || 0;
+                    html += `<div style="margin: 5px 0;">${partners[key].name} (${key}): ₹${formatNumber(salary)}</div>`;
+                });
+
+                html += '</div>';
+                content.innerHTML = html;
+            } catch (error) {
+                showAlert('Failed to generate report', 'danger');
+            }
+        }
+
+        function getMonthName(month) {
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+            return months[parseInt(month) - 1];
+        }
+
+        // Update Partner Selects
+        function updatePartnerSelects() {
+            const extraSelect = document.getElementById('extraPartner');
+            const debtSelect = document.getElementById('debtPartner');
+
+            [extraSelect, debtSelect].forEach(select => {
+                select.innerHTML = Object.keys(partners).map(key => 
+                    `<option value="${key}">${partners[key].name} (${key})</option>`
+                ).join('');
+            });
+        }
+
+        // Toggle Functions
+        function togglePaymentForm() {
+            document.getElementById('paymentFormSection').classList.toggle('hidden');
+        }
+
+        function toggleExtraPayment() {
+            document.getElementById('extraPaymentSection').classList.toggle('hidden');
+        }
+
+        function toggleNewDebt() {
+            document.getElementById('newDebtSection').classList.toggle('hidden');
+        }
+
+        function toggleMonthlyReport() {
+            document.getElementById('monthlyReportSection').classList.toggle('hidden');
+        }
+
+        // Utility Functions
+        function showSection(sectionId) {
+            ['adminLoginSection', 'accessDeniedSection', 'app'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+
+            container.appendChild(alert);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function formatNumber(num) {
+            return Math.round(num).toLocaleString('en-IN');
+        }
+
+        // Initialize app
         init();
     </script>
 </body>
