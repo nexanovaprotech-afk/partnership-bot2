@@ -2100,61 +2100,67 @@ function handleFileSelected(event) {
     console.log('File selected:', file.name);
     const reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
             const importedData = JSON.parse(e.target.result);
 
-            if (!importedData.entries || !importedData.partnerships) {
+            // Validate backup structure
+            if (!importedData.partners || !importedData.state) {
                 throw new Error('Invalid backup file format');
             }
 
             const dateStr = importedData.exportDate ? new Date(importedData.exportDate).toLocaleString() : 'unknown date';
-            const confirmMsg = `Import backup from ${dateStr}?\n\nEntries: ${importedData.entries.length}\nPartners: ${Object.keys(importedData.partnerships).length}\n\nThis will replace current data!`;
+            const payments = importedData.state.payments ? importedData.state.payments.length : 0;
+            const partners = Object.keys(importedData.partners).length;
+
+            const confirmMsg = `Import backup from ${dateStr}?\n\nPayments: ${payments}\nPartners: ${partners}\n\nThis will replace current data!`;
 
             if (confirm(confirmMsg)) {
                 console.log('User confirmed import');
+                showAlert('Importing data...', 'info');
 
                 // Send to server
-                fetch('/api/import-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(importedData)
-                })
-                .then(response => response.json())
-                .then(result => {
+                try {
+                    const response = await fetch(`${API_URL}/api/import`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            telegramId: telegramId,
+                            data: importedData
+                        })
+                    });
+
+                    const result = await response.json();
                     console.log('Import result:', result);
+
                     if (result.success) {
-                        entries = importedData.entries;
-                        partnerships = importedData.partnerships;
-                        updateEntriesTable();
-                        updatePartnerSelect();
-                        showNotification('✅ Data imported successfully!', 'success');
+                        showAlert('✅ Data imported successfully!', 'success');
                         setTimeout(() => {
                             location.reload();
                         }, 1500);
                     } else {
-                        showNotification('❌ Import failed: ' + result.message, 'error');
+                        showAlert('❌ Import failed: ' + (result.error || result.message), 'error');
                     }
-                })
-                .catch(error => {
+                } catch (error) {
                     console.error('Import API error:', error);
-                    showNotification('❌ Import failed: ' + error.message, 'error');
-                });
+                    showAlert('❌ Import failed: ' + error.message, 'error');
+                }
             } else {
                 console.log('User cancelled import');
             }
         } catch (error) {
             console.error('File parse error:', error);
-            showNotification('❌ Invalid backup file: ' + error.message, 'error');
+            showAlert('❌ Invalid backup file: ' + error.message, 'error');
         }
     };
 
     reader.onerror = function() {
         console.error('File read error');
-        showNotification('❌ Failed to read file', 'error');
+        showAlert('❌ Failed to read file', 'error');
     };
 
     reader.readAsText(file);
+    event.target.value = ''; // Reset file input;
     event.target.value = ''; // Reset file input
 }
 
