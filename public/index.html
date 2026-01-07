@@ -1086,7 +1086,7 @@
 
         let INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
         const SHAREHOLDING = { A: 0.30, B: 0.30, C: 0.40 };
-        let partnerships = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 }; // Partnership shares
+        let partnerships = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 };
 
         let isAdmin = false;
         let isApproved = false;
@@ -1606,7 +1606,7 @@
             const paymentStartDate = document.getElementById('editStartDate').value;
             const paymentEndDate = document.getElementById('editEndDate').value;
 
-            if (!amount || amount <= 0) {
+            if (!amount || isNaN(amount)) {
                 showAlert('⚠️ Enter valid amount', 'error');
                 return;
             }
@@ -1704,7 +1704,7 @@
                 const list = document.getElementById('historyList');
                 if (data.history && data.history.length > 0) {
                     list.innerHTML = data.history.map(item => {
-                        const editBtn = isAdmin ? `<button class="btn btn-warning btn-small" onclick="openEditModal('${item.id}', ${item.amount}, '${escapeHtml(item.comment || '')}', '${item.paymentStartDate || ''}', '${item.paymentEndDate || ''}')">✏️ Edit</button>` : '';
+                        const editBtn = isAdmin ? `<button class="btn btn-warning btn-small" onclick="openEditModal('${item.id}', ${item.amount}, \`${(item.comment || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`, '${item.paymentStartDate || ''}', '${item.paymentEndDate || ''}')">✏️ Edit</button>` : '';
                         const deleteBtn = isAdmin ? `<button class="btn btn-danger btn-small" onclick="deletePayment('${item.id}')">🗑️ Delete</button>` : '';
 
                         const commentHtml = item.comment ? `
@@ -2201,7 +2201,6 @@ let tempPartnerships = {};
 function handleOpenPartnershipConfig() {
     console.log('Opening partnership config');
     try {
-        // Initialize partnerships if not loaded
         if (!partnerships || Object.keys(partnerships).length === 0) {
             partnerships = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 };
         }
@@ -2377,10 +2376,8 @@ function handleSavePartnershipConfig() {
         }
     }
 
-    // Save to local variable
     partnerships = JSON.parse(JSON.stringify(tempPartnerships));
 
-    // Save to server using correct endpoint
     fetch(`${API_URL}/api/partnerships`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2394,10 +2391,7 @@ function handleSavePartnershipConfig() {
         if (data.success) {
             showNotification('✅ Partnership configuration saved!', 'success');
             handleClosePartnershipConfig();
-            // Reload state to reflect changes
-            setTimeout(() => {
-                loadState();
-            }, 500);
+            setTimeout(() => { loadState(); }, 500);
         } else {
             showNotification('❌ Failed to save: ' + data.message, 'error');
         }
