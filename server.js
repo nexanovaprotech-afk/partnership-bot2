@@ -14,6 +14,9 @@ let ADMIN_TELEGRAM_ID = PRESET_ADMIN_ID;
 let approvedUsers = new Set();
 let pendingApprovals = [];
 
+// Partnership configuration storage
+let partnershipsConfig = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 };
+
 // DYNAMIC PARTNERS CONFIGURATION
 let PARTNERS = {
     A: { name: 'Bhargav', debt: 66250, share: 0.30 },
@@ -727,11 +730,7 @@ app.post('/api/create-backup', (req, res) => {
 // ==================== PARTNERSHIP CONFIGURATION API ====================
 app.get('/api/partnerships', (req, res) => {
     try {
-        const partnerships = {
-            'Bhargav (A)': 30,
-            'Sagar (B)': 30,
-            'Bharat (C)': 40
-        };
+        const partnerships = partnershipsConfig;
 
         console.log('📊 Partnerships requested');
         res.json({ success: true, partnerships: partnerships });
@@ -754,6 +753,10 @@ app.post('/api/partnerships', (req, res) => {
         }
 
         const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
+
+        // Save the partnerships configuration
+        partnershipsConfig = partnerships;
+
 
         console.log(`✅ Partnerships updated by ${telegramId}`);
         console.log(`   Total: ${totalPercentage.toFixed(2)}%`);
