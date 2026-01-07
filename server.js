@@ -5,17 +5,6 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-// Health check endpoint for Render.com
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Root route - serves the index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-
 const ADMIN_PASSWORD = 'admin123';
 const PRESET_ADMIN_ID = null;
 
