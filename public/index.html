@@ -1086,6 +1086,7 @@
 
         let INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
         const SHAREHOLDING = { A: 0.30, B: 0.30, C: 0.40 };
+        let partnerships = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 }; // Partnership shares in percentage
 
         let isAdmin = false;
         let isApproved = false;
@@ -1290,6 +1291,20 @@
                 document.getElementById('initialDebtC').textContent = `₹${formatNumber(INITIAL_DEBTS.C)}`;
             } catch (error) {
                 console.error('Error loading config:', error);
+            }
+        }
+
+
+        async function loadPartnerships() {
+            try {
+                const response = await fetch(`${API_URL}/api/partnerships`);
+                const data = await response.json();
+                if (data.success && data.partnerships) {
+                    partnerships = data.partnerships;
+                    console.log('✅ Partnerships loaded:', partnerships);
+                }
+            } catch (error) {
+                console.error('Failed to load partnerships:', error);
             }
         }
 
@@ -2362,9 +2377,35 @@ function handleSavePartnershipConfig() {
     .then(result => {
         console.log('Save result:', result);
         if (result.success) {
-            partnerships = JSON.parse(JSON.stringify(tempPartnerships));
-            updatePartnerSelect();
-            handleClosePartnershipConfig();
+        // Save to local variable
+        partnerships = JSON.parse(JSON.stringify(tempPartnerships));
+
+        // Save to server
+        fetch(`${API_URL}/api/partnerships`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegramId: telegramId,
+                partnerships: partnerships
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('✅ Partnership configuration saved!', 'success');
+                handleClosePartnershipConfig();
+                // Reload to reflect changes
+                setTimeout(() => {
+                    loadState();
+                }, 500);
+            } else {
+                showNotification('❌ Failed to save: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Save partnership error:', error);
+            showNotification('❌ Error saving partnerships', 'error');
+        });
             showNotification('✅ Partnership configuration saved!', 'success');
 
             // Recalculate all entries with new shares
