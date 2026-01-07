@@ -1,15 +1,18 @@
 {
   "name": "partnership-calculator",
-  "version": "1.0.0",
-  "description": "Partnership Calculator Bot",
+  "version": "2.0.0",
+  "description": "Partnership Calculator Telegram Mini App",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   },
   "dependencies": {
     "express": "^4.18.2"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "author": "",
+  "license": "MIT"
 }
