@@ -1086,7 +1086,7 @@
 
         let INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
         const SHAREHOLDING = { A: 0.30, B: 0.30, C: 0.40 };
-        let partnerships = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 }; // Partnership shares in percentage
+        let partnerships = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 }; // Partnership shares
 
         let isAdmin = false;
         let isApproved = false;
@@ -1294,7 +1294,6 @@
                 console.error('Error loading config:', error);
             }
         }
-
 
         async function loadPartnerships() {
             try {
@@ -2202,6 +2201,10 @@ let tempPartnerships = {};
 function handleOpenPartnershipConfig() {
     console.log('Opening partnership config');
     try {
+        // Initialize partnerships if not loaded
+        if (!partnerships || Object.keys(partnerships).length === 0) {
+            partnerships = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 };
+        }
         tempPartnerships = JSON.parse(JSON.stringify(partnerships));
         renderPartnershipConfigList();
         const modal = document.getElementById('partnershipConfigModal');
@@ -2374,64 +2377,34 @@ function handleSavePartnershipConfig() {
         }
     }
 
-    // Send to server
-    fetch('/api/update-partnerships', {
+    // Save to local variable
+    partnerships = JSON.parse(JSON.stringify(tempPartnerships));
+
+    // Save to server using correct endpoint
+    fetch(`${API_URL}/api/partnerships`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partnerships: tempPartnerships })
+        body: JSON.stringify({
+            telegramId: telegramId,
+            partnerships: partnerships
+        })
     })
     .then(response => response.json())
-    .then(result => {
-        console.log('Save result:', result);
-        if (result.success) {
-        // Save to local variable
-        partnerships = JSON.parse(JSON.stringify(tempPartnerships));
-
-        // Save to server
-        fetch(`${API_URL}/api/partnerships`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                telegramId: telegramId,
-                partnerships: partnerships
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification('✅ Partnership configuration saved!', 'success');
-                handleClosePartnershipConfig();
-                // Reload to reflect changes
-                setTimeout(() => {
-                    loadState();
-                }, 500);
-            } else {
-                showNotification('❌ Failed to save: ' + data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Save partnership error:', error);
-            showNotification('❌ Error saving partnerships', 'error');
-        });
+    .then(data => {
+        if (data.success) {
             showNotification('✅ Partnership configuration saved!', 'success');
-
-            // Recalculate all entries with new shares
-            entries.forEach(entry => {
-                const partnerName = entry.partner || entry.type;
-                if (partnerships[partnerName]) {
-                    entry.share = partnerships[partnerName];
-                    entry.partnerAmount = (entry.actualAmount * entry.share) / 100;
-                }
-            });
-            updateEntriesTable();
-            console.log('Partnerships updated successfully');
+            handleClosePartnershipConfig();
+            // Reload state to reflect changes
+            setTimeout(() => {
+                loadState();
+            }, 500);
         } else {
-            showNotification('❌ Save failed: ' + result.message, 'error');
+            showNotification('❌ Failed to save: ' + data.message, 'error');
         }
     })
     .catch(error => {
-        console.error('Save API error:', error);
-        showNotification('❌ Failed to save: ' + error.message, 'error');
+        console.error('Save partnership error:', error);
+        showNotification('❌ Error saving partnerships', 'error');
     });
 }
 
