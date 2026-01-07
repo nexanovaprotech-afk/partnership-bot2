@@ -1087,6 +1087,13 @@
         let INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
         const SHAREHOLDING = { A: 0.30, B: 0.30, C: 0.40 };
 
+        // Partnership configuration (name: share percentage)
+        let partnerships = {
+            "Bhargav": 30,
+            "Sagar": 30,
+            "Bharat": 40
+        };
+        let tempPartnerships = {}; // Temporary storage for modal editing
         let isAdmin = false;
         let isApproved = false;
         let telegramId = tg.initDataUnsafe?.user?.id || null;
