@@ -685,24 +685,6 @@
     <div class="container">
         <div id="alertContainer"></div>
 
-
-    <!-- Loading Screen -->
-    <div id="loadingScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); z-index: 99999; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-        <div style="text-align: center; color: white;">
-            <div style="font-size: 48px; margin-bottom: 20px;">💼</div>
-            <h2 style="margin: 0 0 10px 0;">Partnership Calculator</h2>
-            <p style="margin: 0; opacity: 0.9;">Connecting to server...</p>
-            <div style="margin-top: 20px;">
-                <div style="width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-        </div>
-    </div>
-    <style>
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
-
         <!-- ACCESS REQUEST SECTION -->
         <div id="accessRequestSection" class="hidden">
             <div class="access-denied">
@@ -1105,13 +1087,6 @@
         let INITIAL_DEBTS = { A: 66250, B: 66250, C: 17450 };
         const SHAREHOLDING = { A: 0.30, B: 0.30, C: 0.40 };
 
-        // Partnership configuration (name: share percentage)
-        let partnerships = {
-            "Bhargav": 30,
-            "Sagar": 30,
-            "Bharat": 40
-        };
-        let tempPartnerships = {}; // Temporary storage for modal editing
         let isAdmin = false;
         let isApproved = false;
         let telegramId = tg.initDataUnsafe?.user?.id || null;
@@ -1120,20 +1095,7 @@
         let debtFullyPaid = false;
 
         async function init() {
-            // Show loading screen
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                loadingScreen.style.display = 'flex';
-            }
-
-            // Wait for server connection with timeout
             await checkAccessStatus();
-
-            // Hide loading screen
-            if (loadingScreen) {
-                loadingScreen.style.display = 'none';
-            }
-
             setupEventListeners();
         }
 
@@ -1142,60 +1104,29 @@
         }
 
         async function checkAccessStatus() {
-            // Retry logic for Render.com cold starts
-            const maxRetries = 3;
-            const timeout = 15000; // 15 seconds timeout
+            try {
+                const response = await fetch(`${API_URL}/api/admin/check?telegramId=${telegramId}`);
+                const data = await response.json();
 
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`Checking server connection (attempt ${attempt}/${maxRetries})...`);
+                isAdmin = data.isAdmin;
+                isApproved = data.isApproved;
 
-                    // Create fetch with timeout
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-                    const response = await fetch(`${API_URL}/api/admin/check?telegramId=${telegramId}`, {
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeoutId);
-
-                    const data = await response.json();
-
-                    isAdmin = data.isAdmin;
-                    isApproved = data.isApproved;
-
-                    console.log('Server connected successfully!');
-
-                    if (isAdmin) {
-                        showAdminUI();
-                        await loadConfig();
-                        await loadState();
-                        await loadPendingApprovals();
-                    } else if (isApproved) {
-                        showUserUI();
-                        await loadConfig();
-                        await loadState();
-                    } else if (!data.hasAdmin) {
-                        document.getElementById('adminLoginSection').classList.remove('hidden');
-                    } else {
-                        document.getElementById('accessRequestSection').classList.remove('hidden');
-                    }
-
-                    return; // Success, exit function
-
-                } catch (error) {
-                    console.error(`Connection attempt ${attempt} failed:`, error.message);
-
-                    if (attempt === maxRetries) {
-                        // Final attempt failed, show admin login
-                        console.log('Server not reachable after all retries. Showing admin login.');
-                        document.getElementById('adminLoginSection').classList.remove('hidden');
-                        showAlert('Could not connect to server. Please try admin login.', 'error');
-                    } else {
-                        // Wait before retry (exponential backoff)
-                        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
-                    }
+                if (isAdmin) {
+                    showAdminUI();
+                    await loadConfig();
+                    await loadState();
+                    await loadPendingApprovals();
+                } else if (isApproved) {
+                    showUserUI();
+                    await loadConfig();
+                    await loadState();
+                } else if (!data.hasAdmin) {
+                    document.getElementById('adminLoginSection').classList.remove('hidden');
+                } else {
+                    document.getElementById('accessRequestSection').classList.remove('hidden');
                 }
+            } catch (error) {
+                console.error('Error checking access:', error);
             }
         }
 
