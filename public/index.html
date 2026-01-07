@@ -1115,6 +1115,7 @@
                 if (isAdmin) {
                     showAdminUI();
                     await loadConfig();
+                    await loadPartnerships();
                     await loadState();
                     await loadPendingApprovals();
                 } else if (isApproved) {
@@ -2249,15 +2250,15 @@ function renderPartnershipConfigList() {
         htmlContent += `
             <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; margin-bottom: 8px;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                    <input type="text" id="partnerName_${index}" value="${name}" style="flex: 2; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; box-sizing: border-box;">
+                    <input type="text" id="partnerName_${index}" value="${name.replace(/"/g, '&quot;')}" style="flex: 2; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; box-sizing: border-box;">
                     <input type="number" id="partnerShare_${index}" value="${share}" step="0.01" min="0" max="100" style="flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
                     <span style="color: white; font-weight: bold; font-size: 14px;">%</span>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button type="button" onclick="handleUpdatePartner('${escapedName}', ${index})" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; font-size: 13px;">
+                    <button type="button" onclick="handleUpdatePartner(${index})" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; font-size: 13px;">
                         ✅ Update
                     </button>
-                    <button type="button" onclick="handleDeletePartner('${escapedName}')" style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">
+                    <button type="button" onclick="handleDeletePartner(${index})" style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">
                         🗑️ Delete
                     </button>
                 </div>
@@ -2310,8 +2311,11 @@ function handleAddNewPartner() {
     console.log('Partner added:', name, share);
 }
 
-function handleUpdatePartner(oldName, index) {
-    console.log('Updating partner:', oldName);
+function handleUpdatePartner(index) {
+    console.log('Updating partner at index:', index);
+    const partnerNames = Object.keys(tempPartnerships);
+    const oldName = partnerNames[index];
+    
     const newName = document.getElementById('partnerName_' + index).value.trim();
     const newShare = parseFloat(document.getElementById('partnerShare_' + index).value);
 
@@ -2346,8 +2350,11 @@ function handleUpdatePartner(oldName, index) {
     console.log('Partner updated:', newName, newShare);
 }
 
-function handleDeletePartner(name) {
+function handleDeletePartner(index) {
     console.log('Deleting partner:', name);
+    const partnerNames = Object.keys(tempPartnerships);
+    const name = partnerNames[index];
+    
     if (confirm(`Delete partner "${name}"?`)) {
         delete tempPartnerships[name];
         renderPartnershipConfigList();
