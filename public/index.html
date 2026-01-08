@@ -960,6 +960,14 @@
                     <span class="partner-label">Initial Debt:</span>
                     <span class="partner-value" id="initialDebtA">₹66,250</span>
                 </div>
+                <div class="partner-row" id="newDebtRowA" style="display: none;">
+                    <span class="partner-label">🆕 New Debt Added:</span>
+                    <span class="partner-value" id="newDebtA" style="color: #e74c3c; font-weight: bold;">₹0</span>
+                </div>
+                <div class="partner-row" id="totalDebtRowA" style="display: none;">
+                    <span class="partner-label" style="font-weight: bold;">Total Debt:</span>
+                    <span class="partner-value" id="totalDebtA" style="font-weight: bold;">₹66,250</span>
+                </div>
                 <div class="partner-row">
                     <span class="partner-label">Paid (Regular):</span>
                     <span class="partner-value paid" id="paidDebtA">₹0</span>
@@ -980,6 +988,14 @@
                     <span class="partner-label">Initial Debt:</span>
                     <span class="partner-value" id="initialDebtB">₹66,250</span>
                 </div>
+                <div class="partner-row" id="newDebtRowB" style="display: none;">
+                    <span class="partner-label">🆕 New Debt Added:</span>
+                    <span class="partner-value" id="newDebtB" style="color: #e74c3c; font-weight: bold;">₹0</span>
+                </div>
+                <div class="partner-row" id="totalDebtRowB" style="display: none;">
+                    <span class="partner-label" style="font-weight: bold;">Total Debt:</span>
+                    <span class="partner-value" id="totalDebtB" style="font-weight: bold;">₹66,250</span>
+                </div>
                 <div class="partner-row">
                     <span class="partner-label">Paid (Regular):</span>
                     <span class="partner-value paid" id="paidDebtB">₹0</span>
@@ -999,6 +1015,14 @@
                 <div class="partner-row">
                     <span class="partner-label">Initial Debt:</span>
                     <span class="partner-value" id="initialDebtC">₹17,450</span>
+                </div>
+                <div class="partner-row" id="newDebtRowC" style="display: none;">
+                    <span class="partner-label">🆕 New Debt Added:</span>
+                    <span class="partner-value" id="newDebtC" style="color: #e74c3c; font-weight: bold;">₹0</span>
+                </div>
+                <div class="partner-row" id="totalDebtRowC" style="display: none;">
+                    <span class="partner-label" style="font-weight: bold;">Total Debt:</span>
+                    <span class="partner-value" id="totalDebtC" style="font-weight: bold;">₹17,450</span>
                 </div>
                 <div class="partner-row">
                     <span class="partner-label">Paid (Regular):</span>
@@ -1388,17 +1412,67 @@
         }
 
         function updateRemainingDebts(debtPaid, extraPayments) {
-            document.getElementById('paidDebtA').textContent = `₹${formatNumber(debtPaid.A)}`;
-            document.getElementById('paidDebtB').textContent = `₹${formatNumber(debtPaid.B)}`;
-            document.getElementById('paidDebtC').textContent = `₹${formatNumber(debtPaid.C)}`;
+            const partners = [
+                { key: 'A', name: 'Bhargav', debt: INITIAL_DEBTS.A },
+                { key: 'B', name: 'Sagar', debt: INITIAL_DEBTS.B },
+                { key: 'C', name: 'Bharat', debt: INITIAL_DEBTS.C }
+            ];
 
-            const debtA = Math.max(0, INITIAL_DEBTS.A - debtPaid.A - (extraPayments.A || 0));
-            const debtB = Math.max(0, INITIAL_DEBTS.B - debtPaid.B - (extraPayments.B || 0));
-            const debtC = Math.max(0, INITIAL_DEBTS.C - debtPaid.C - (extraPayments.C || 0));
+            partners.forEach(partner => {
+                const key = partner.key;
+                const paid = debtPaid[key] || 0;
+                const extra = extraPayments[key] || 0;
 
-            document.getElementById('debtA').textContent = `₹${formatNumber(debtA)}`;
-            document.getElementById('debtB').textContent = `₹${formatNumber(debtB)}`;
-            document.getElementById('debtC').textContent = `₹${formatNumber(debtC)}`;
+                // Separate new debts (negative) from extra payments (positive)
+                const newDebt = extra < 0 ? Math.abs(extra) : 0;
+                const actualExtraPaid = extra > 0 ? extra : 0;
+
+                // Update paid amount
+                document.getElementById(`paidDebt${key}`).textContent = `₹${formatNumber(paid)}`;
+
+                // Show/hide and update new debt row
+                const newDebtRow = document.getElementById(`newDebtRow${key}`);
+                const newDebtAmount = document.getElementById(`newDebt${key}`);
+                const totalDebtRow = document.getElementById(`totalDebtRow${key}`);
+                const totalDebtAmount = document.getElementById(`totalDebt${key}`);
+
+                if (newDebt > 0) {
+                    // Show new debt
+                    if (newDebtRow) {
+                        newDebtRow.style.display = 'flex';
+                        newDebtAmount.textContent = `₹${formatNumber(newDebt)}`;
+                    }
+                    // Show total debt
+                    if (totalDebtRow) {
+                        totalDebtRow.style.display = 'flex';
+                        totalDebtAmount.textContent = `₹${formatNumber(partner.debt + newDebt)}`;
+                    }
+                } else {
+                    // Hide new debt rows
+                    if (newDebtRow) newDebtRow.style.display = 'none';
+                    if (totalDebtRow) totalDebtRow.style.display = 'none';
+                }
+
+                // Update extra paid
+                document.getElementById(`extra${key}`).textContent = `₹${formatNumber(actualExtraPaid)}`;
+
+                // Calculate remaining: initial debt + new debt - regular paid - extra paid
+                const totalDebt = partner.debt + newDebt;
+                const totalPaid = paid + actualExtraPaid;
+                const remaining = Math.max(0, totalDebt - totalPaid);
+
+                document.getElementById(`debt${key}`).textContent = `₹${formatNumber(remaining)}`;
+
+                // Color code remaining debt
+                const debtElement = document.getElementById(`debt${key}`);
+                if (remaining > 0) {
+                    debtElement.style.color = '#e74c3c';
+                    debtElement.style.fontWeight = 'bold';
+                } else {
+                    debtElement.style.color = '#27ae60';
+                    debtElement.style.fontWeight = 'bold';
+                }
+            });
         }
 
         function updateExtraPayments(extraPayments) {
