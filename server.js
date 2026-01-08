@@ -338,6 +338,35 @@ app.post('/api/config/partners', (req, res) => {
     res.json({ success: true, partners: PARTNERS });
 });
 
+
+// UPDATE INITIAL DEBTS
+app.post('/api/config/debts', (req, res) => {
+    const { debtA, debtB, debtC, telegramId } = req.body;
+
+    if (!isAdmin(telegramId)) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (debtA === undefined || debtB === undefined || debtC === undefined) {
+        return res.status(400).json({ error: 'All debt values required' });
+    }
+
+    // Update initial debts for all partners
+    PARTNERS.A.debt = parseFloat(debtA);
+    PARTNERS.B.debt = parseFloat(debtB);
+    PARTNERS.C.debt = parseFloat(debtC);
+
+    // Recalculate everything with new debt values
+    recalculateState();
+
+    console.log('⚙️ Initial Debts Updated');
+    console.log(`  ${PARTNERS.A.name}: ₹${debtA}`);
+    console.log(`  ${PARTNERS.B.name}: ₹${debtB}`);
+    console.log(`  ${PARTNERS.C.name}: ₹${debtC}`);
+
+    res.json({ success: true, partners: PARTNERS });
+});
+
 // PAYMENT ENDPOINTS
 app.get('/api/history', (req, res) => {
     const { telegramId, limit } = req.query;
