@@ -1305,30 +1305,12 @@
             try {
                 const response = await fetch(`${API_URL}/api/config`);
                 const config = await response.json();
+                INITIAL_DEBTS = config.initialDebts;
 
-                // Update PARTNERS with server data
-                if (config.partners) {
-                    PARTNERS = config.partners;
-                }
-
-                // Update INITIAL_DEBTS from server
-                if (config.initialDebts) {
-                    INITIAL_DEBTS = config.initialDebts;
-                } else {
-                    // Fallback to partners debt values
-                    INITIAL_DEBTS = {
-                        A: PARTNERS.A.debt,
-                        B: PARTNERS.B.debt,
-                        C: PARTNERS.C.debt
-                    };
-                }
-
-                // Update config input fields
                 document.getElementById('configDebtA').value = INITIAL_DEBTS.A;
                 document.getElementById('configDebtB').value = INITIAL_DEBTS.B;
                 document.getElementById('configDebtC').value = INITIAL_DEBTS.C;
 
-                // Update debt status display - Initial Debt values
                 document.getElementById('initialDebtA').textContent = `₹${formatNumber(INITIAL_DEBTS.A)}`;
                 document.getElementById('initialDebtB').textContent = `₹${formatNumber(INITIAL_DEBTS.B)}`;
                 document.getElementById('initialDebtC').textContent = `₹${formatNumber(INITIAL_DEBTS.C)}`;
@@ -1336,6 +1318,7 @@
                 console.error('Error loading config:', error);
             }
         }
+
         async function loadPartnerships() {
             try {
                 const response = await fetch(`${API_URL}/api/partnerships`);
