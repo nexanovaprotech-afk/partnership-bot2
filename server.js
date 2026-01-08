@@ -309,7 +309,6 @@ app.get('/api/config', (req, res) => {
         }
     });
 });
-});
 
 // UPDATE PARTNERS CONFIGURATION
 app.post('/api/config/partners', (req, res) => {
