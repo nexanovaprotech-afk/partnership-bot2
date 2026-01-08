@@ -301,8 +301,14 @@ app.get('/api/state', (req, res) => {
 
 app.get('/api/config', (req, res) => {
     res.json({
-        partners: PARTNERS
+        partners: PARTNERS,
+        initialDebts: { 
+            A: PARTNERS.A.debt, 
+            B: PARTNERS.B.debt, 
+            C: PARTNERS.C.debt 
+        }
     });
+});
 });
 
 // UPDATE PARTNERS CONFIGURATION
