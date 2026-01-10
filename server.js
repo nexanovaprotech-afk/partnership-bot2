@@ -436,6 +436,16 @@ app.post('/api/payment', (req, res) => {
     const partnerDetails = calculatePartnerDetails(amount);
     const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
+    // Store current partnership shares snapshot
+    const sharesSnapshot = {};
+    Object.keys(PARTNERS).forEach(key => {
+        sharesSnapshot[key] = { 
+            name: PARTNERS[key].name, 
+            share: PARTNERS[key].share,
+            debt: PARTNERS[key].debt
+        };
+    });
+
     state.payments.push({
         id: paymentId,
         type: 'regular',
@@ -448,7 +458,8 @@ app.post('/api/payment', (req, res) => {
         telegramId,
         comment: comment || '',
         paymentStartDate: paymentStartDate || null,
-        paymentEndDate: paymentEndDate || null
+        paymentEndDate: paymentEndDate || null,
+        sharesSnapshot: sharesSnapshot  // Store shares at time of payment
     });
 
     state.totalDebtPaid += partnerDetails.toPersonX;
