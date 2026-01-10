@@ -15,13 +15,13 @@ let approvedUsers = new Set();
 let pendingApprovals = [];
 
 // Partnership configuration storage
-let partnershipsConfig = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 };
+let partnershipsConfig = { "Bhargav": 33.34, "Sagar": 33.33, "Bharat": 33.33 };
 
 // DYNAMIC PARTNERS CONFIGURATION
 let PARTNERS = {
-    A: { name: 'Bhargav', debt: 66250, share: 0.30 },
-    B: { name: 'Sagar', debt: 66250, share: 0.30 },
-    C: { name: 'Bharat', debt: 17450, share: 0.40 }
+    A: { name: 'Bhargav', debt: 66250, share: 0.3334 },
+    B: { name: 'Sagar', debt: 66250, share: 0.3333 },
+    C: { name: 'Bharat', debt: 17450, share: 0.3333 }
 };
 
 let state = {
@@ -436,16 +436,6 @@ app.post('/api/payment', (req, res) => {
     const partnerDetails = calculatePartnerDetails(amount);
     const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
-    // Store current partnership shares snapshot
-    const sharesSnapshot = {};
-    Object.keys(PARTNERS).forEach(key => {
-        sharesSnapshot[key] = { 
-            name: PARTNERS[key].name, 
-            share: PARTNERS[key].share,
-            debt: PARTNERS[key].debt
-        };
-    });
-
     state.payments.push({
         id: paymentId,
         type: 'regular',
@@ -458,8 +448,7 @@ app.post('/api/payment', (req, res) => {
         telegramId,
         comment: comment || '',
         paymentStartDate: paymentStartDate || null,
-        paymentEndDate: paymentEndDate || null,
-        sharesSnapshot: sharesSnapshot  // Store shares at time of payment
+        paymentEndDate: paymentEndDate || null
     });
 
     state.totalDebtPaid += partnerDetails.toPersonX;
