@@ -19,9 +19,9 @@ let partnershipsConfig = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 };
 
 // DYNAMIC PARTNERS CONFIGURATION
 let PARTNERS = {
-    A: { name: 'Bhargav', debt: 66250, share: 0.30 },
-    B: { name: 'Sagar', debt: 66250, share: 0.30 },
-    C: { name: 'Bharat', debt: 17450, share: 0.40 }
+    A: { name: 'Bhargav', debt: 66250, share: 0.3334 },
+    B: { name: 'Sagar', debt: 66250, share: 0.3333 },
+    C: { name: 'Bharat', debt: 17450, share: 0.3333 }
 };
 
 let state = {
@@ -337,13 +337,9 @@ app.post('/api/config/partners', (req, res) => {
     });
     state.extraPayments = newExtraPayments;
 
-    // DO NOT recalculate existing payments - they keep their original percentages
-    // Only check if debt is fully paid with current state
-    state.debtFullyPaid = getRemainingDebt() <= 0;
+    recalculateState();
 
     console.log('⚙️ Partners Configuration Updated');
-    console.log('   📌 Historical payments unchanged - using original percentages');
-    console.log('   ✅ New payments will use new percentages');
     res.json({ success: true, partners: PARTNERS });
 });
 
@@ -792,17 +788,33 @@ app.post('/api/partnerships', (req, res) => {
 
         const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
 
+        // CRITICAL FIX: Update PARTNERS object shares (used by calculatePartnerDetails)
+        Object.keys(partnerships).forEach(partnerName => {
+            const percentage = parseFloat(partnerships[partnerName]) / 100; // Convert to decimal
+            // Find partner by name and update share
+            Object.keys(PARTNERS).forEach(key => {
+                if (PARTNERS[key].name === partnerName) {
+                    PARTNERS[key].share = percentage;
+                }
+            });
+        });
+
         // Save the partnerships configuration
         partnershipsConfig = partnerships;
 
-
         console.log(`✅ Partnerships updated by ${telegramId}`);
         console.log(`   Total: ${totalPercentage.toFixed(2)}%`);
+        console.log('   📌 Historical payments unchanged');
+        console.log('   ✅ New payments will use:');
+        Object.keys(PARTNERS).forEach(key => {
+            console.log(`      ${PARTNERS[key].name}: ${(PARTNERS[key].share * 100).toFixed(2)}%`);
+        });
 
         res.json({ 
             success: true, 
             message: 'Partnerships configuration saved',
-            totalPercentage: totalPercentage.toFixed(2)
+            totalPercentage: totalPercentage.toFixed(2),
+            updatedShares: PARTNERS  // Send back updated shares
         });
     } catch (error) {
         console.error('Update partnerships error:', error);
