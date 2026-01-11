@@ -19,9 +19,9 @@ let partnershipsConfig = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 };
 
 // DYNAMIC PARTNERS CONFIGURATION
 let PARTNERS = {
-    A: { name: 'Bhargav', debt: 66250, share: 0.3334 },
-    B: { name: 'Sagar', debt: 66250, share: 0.3333 },
-    C: { name: 'Bharat', debt: 17450, share: 0.3333 }
+    A: { name: 'Bhargav', debt: 66250, share: 0.30 },
+    B: { name: 'Sagar', debt: 66250, share: 0.30 },
+    C: { name: 'Bharat', debt: 17450, share: 0.40 }
 };
 
 let state = {
@@ -436,7 +436,7 @@ app.post('/api/payment', (req, res) => {
     const partnerDetails = calculatePartnerDetails(amount);
     const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
-    // Store current percentages
+    // Store current partnership percentages with this payment
     const currentShares = {};
     Object.keys(PARTNERS).forEach(key => {
         currentShares[key] = PARTNERS[key].share;
@@ -449,7 +449,7 @@ app.post('/api/payment', (req, res) => {
         toPersonX: partnerDetails.toPersonX,
         toSalary: partnerDetails.toSalary,
         partnerDetails: partnerDetails.partners,
-        currentShares: currentShares,
+        currentShares: currentShares,  // Store percentages used for this payment
         recordedBy: recordedBy || 'Unknown',
         timestamp: new Date().toISOString(),
         telegramId,
@@ -794,16 +794,6 @@ app.post('/api/partnerships', (req, res) => {
         }
 
         const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
-
-        // Update PARTNERS object shares (CRITICAL FIX)
-        Object.keys(partnerships).forEach(partnerName => {
-            const percentage = parseFloat(partnerships[partnerName]) / 100;
-            Object.keys(PARTNERS).forEach(key => {
-                if (PARTNERS[key].name === partnerName) {
-                    PARTNERS[key].share = percentage;
-                }
-            });
-        });
 
         // Save the partnerships configuration
         partnershipsConfig = partnerships;
