@@ -436,7 +436,7 @@ app.post('/api/payment', (req, res) => {
     const partnerDetails = calculatePartnerDetails(amount);
     const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
-    // Store current share percentages with this payment
+    // Store current percentages
     const currentShares = {};
     Object.keys(PARTNERS).forEach(key => {
         currentShares[key] = PARTNERS[key].share;
@@ -795,7 +795,7 @@ app.post('/api/partnerships', (req, res) => {
 
         const totalPercentage = Object.values(partnerships).reduce((sum, val) => sum + parseFloat(val), 0);
 
-        // Update PARTNERS object with new percentages
+        // Update PARTNERS object shares (CRITICAL FIX)
         Object.keys(partnerships).forEach(partnerName => {
             const percentage = parseFloat(partnerships[partnerName]) / 100;
             Object.keys(PARTNERS).forEach(key => {
