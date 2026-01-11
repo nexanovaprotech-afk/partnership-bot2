@@ -15,13 +15,13 @@ let approvedUsers = new Set();
 let pendingApprovals = [];
 
 // Partnership configuration storage
-let partnershipsConfig = { "Bhargav": 33.34, "Sagar": 33.33, "Bharat": 33.33 };
+let partnershipsConfig = { "Bhargav": 30, "Sagar": 30, "Bharat": 40 };
 
 // DYNAMIC PARTNERS CONFIGURATION
 let PARTNERS = {
-    A: { name: 'Bhargav', debt: 66250, share: 0.3334 },
-    B: { name: 'Sagar', debt: 66250, share: 0.3333 },
-    C: { name: 'Bharat', debt: 17450, share: 0.3333 }
+    A: { name: 'Bhargav', debt: 66250, share: 0.30 },
+    B: { name: 'Sagar', debt: 66250, share: 0.30 },
+    C: { name: 'Bharat', debt: 17450, share: 0.40 }
 };
 
 let state = {
@@ -337,9 +337,13 @@ app.post('/api/config/partners', (req, res) => {
     });
     state.extraPayments = newExtraPayments;
 
-    recalculateState();
+    // DO NOT recalculate existing payments - they keep their original percentages
+    // Only check if debt is fully paid with current state
+    state.debtFullyPaid = getRemainingDebt() <= 0;
 
     console.log('⚙️ Partners Configuration Updated');
+    console.log('   📌 Historical payments unchanged - using original percentages');
+    console.log('   ✅ New payments will use new percentages');
     res.json({ success: true, partners: PARTNERS });
 });
 
