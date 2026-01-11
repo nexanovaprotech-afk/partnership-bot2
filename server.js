@@ -436,12 +436,6 @@ app.post('/api/payment', (req, res) => {
     const partnerDetails = calculatePartnerDetails(amount);
     const paymentId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
-    // Store current partnership percentages with this payment
-    const currentShares = {};
-    Object.keys(PARTNERS).forEach(key => {
-        currentShares[key] = PARTNERS[key].share;
-    });
-
     state.payments.push({
         id: paymentId,
         type: 'regular',
@@ -449,7 +443,6 @@ app.post('/api/payment', (req, res) => {
         toPersonX: partnerDetails.toPersonX,
         toSalary: partnerDetails.toSalary,
         partnerDetails: partnerDetails.partners,
-        currentShares: currentShares,  // Store percentages used for this payment
         recordedBy: recordedBy || 'Unknown',
         timestamp: new Date().toISOString(),
         telegramId,
