@@ -151,7 +151,33 @@ function recalculateState() {
 
     for (let payment of state.payments) {
         if (payment.type === 'regular') {
-            const details = calculatePartnerDetails(payment.amount);
+            // CRITICAL: Check if this payment should split with Person X
+            const shouldSplit = payment.splitWithPersonX !== false && payment.splitWithPersonX !== 'false';
+            let details;
+
+            if (!shouldSplit) {
+                // NO SPLIT MODE - 0% debt, 100% salary
+                const partners = {};
+                Object.keys(PARTNERS).forEach(key => {
+                    const salaryAmount = payment.amount * PARTNERS[key].share;
+                    partners[key] = {
+                        share: salaryAmount,
+                        debt: 0,
+                        salary: salaryAmount
+                    };
+                });
+                details = {
+                    partners: partners,
+                    debtClearRate: 0,
+                    toPersonX: 0,
+                    toSalary: payment.amount,
+                    isDebtComplete: false
+                };
+            } else {
+                // SPLIT MODE - Normal 50/50 calculation
+                details = calculatePartnerDetails(payment.amount);
+            }
+
             payment.toPersonX = details.toPersonX;
             payment.toSalary = details.toSalary;
             payment.partnerDetails = details.partners;
