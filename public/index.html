@@ -803,6 +803,18 @@
                     </div>
                     <input type="number" id="paymentInput" placeholder="20000" min="0" step="0.01">
 
+                    <!-- SPLIT WITH PERSON X OPTION -->
+                    <div style="margin-top: 15px; background: #fff3cd; padding: 12px; border-radius: 8px; border: 1px solid #ffc107;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="splitWithPersonX" checked style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #856404; font-size: 14px;">💰 Split with Person X (Debt Payment)?</span>
+                        </label>
+                        <div style="font-size: 11px; color: #856404; margin-top: 8px; line-height: 1.4;">
+                            <div>✅ <strong>Checked:</strong> 50% to Person X (debt), 50% to partners (salary)</div>
+                            <div style="margin-top: 3px;">❌ <strong>Unchecked:</strong> 100% to partners (salary), no debt payment</div>
+                        </div>
+                    </div>
+
                     <!-- DATE RANGE INPUTS -->
                     <div class="input-label" style="margin-top: 8px;">
                         📅 Payment Period (Optional)
@@ -1550,6 +1562,8 @@
             }
 
             try {
+                const splitWithPersonX = document.getElementById('splitWithPersonX').checked;
+
                 const response = await fetch(`${API_URL}/api/payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1559,7 +1573,8 @@
                         telegramId, 
                         comment,
                         paymentStartDate: paymentStartDate || null,
-                        paymentEndDate: paymentEndDate || null
+                        paymentEndDate: paymentEndDate || null,
+                        splitWithPersonX: splitWithPersonX
                     })
                 });
 
