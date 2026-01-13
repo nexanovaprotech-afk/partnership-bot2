@@ -414,7 +414,7 @@ app.get('/api/monthly', (req, res) => {
 });
 
 app.post('/api/payment', (req, res) => {
-    const { amount, recordedBy, telegramId, comment, paymentStartDate, paymentEndDate } = req.body;
+    const { amount, recordedBy, telegramId, comment, paymentStartDate, paymentEndDate, splitWithPersonX } = req.body;
 
     if (!isAdmin(telegramId)) {
         return res.status(403).json({ error: 'Admin access required' });
